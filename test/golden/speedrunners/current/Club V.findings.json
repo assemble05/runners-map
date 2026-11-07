@@ -1,0 +1,16 @@
+{
+  "profile": "circuit",
+  "ok": true,
+  "cols": 627,
+  "rows": 229,
+  "errors": {},
+  "warnings": {},
+  "surfaces": 255,
+  "links": 1854,
+  "pockets": 0,
+  "networkShare": 1,
+  "lanes": {
+    "two": 0.9631,
+    "three": 0.8266
+  }
+}

@@ -1,15 +1,15 @@
-// node tools/validate.mjs <map.png|rows.txt|template.js> [--tile 12] [--split-row N] [--platform-gray]
+// node tools/validate.mjs <map.png|rows.txt|template.js> [--profile two-levels|circuit] [--tile 12] [--split-row N] [--platform-gray]
 // Prints the findings. Exit code 1 when the map is invalid.
 
 import { parseArgs } from "./lib/args.mjs";
-import { loadAndAnalyze, printFindings } from "./lib/load.mjs";
+import { analysisOptions, loadAndAnalyze, printFindings } from "./lib/load.mjs";
 
 const { positionals, options } = parseArgs(process.argv.slice(2));
 const [file] = positionals;
 if (!file) {
-  console.error("usage: node tools/validate.mjs <map.png|rows.txt|template.js> [--tile 12] [--split-row N] [--platform-gray]");
+  console.error("usage: node tools/validate.mjs <map.png|rows.txt|template.js> [--profile two-levels|circuit] [--tile 12] [--split-row N] [--platform-gray]");
   process.exit(2);
 }
-const result = await loadAndAnalyze(file, { tile: options.tile, separatorRow: options.splitRow, platformGray: options.platformGray === true });
+const result = await loadAndAnalyze(file, analysisOptions(options));
 printFindings(result);
 if (!result.ok) process.exit(1);

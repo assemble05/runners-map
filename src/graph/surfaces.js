@@ -13,14 +13,57 @@ import { PHYSICS } from "../config.js";
 
 export const EDGE = Object.freeze({ JUMP: "jump", DROP: "drop", WALL: "wall" });
 
-/** Lists the surfaces of a tile grid. */
+/** The air the runner can be in: the region of non-solid tiles (4-connected) that holds the most standing tiles.
+ * Air sealed away from it (a cavity, a decorative hole, a sky above a closed ceiling) is a pocket; nothing stands
+ * there. Returns { world, pockets }: a mask of the world air and the count of other regions. */
+export function findWorldAir(tiles) {
+  const label = new Int32Array(tiles.cols * tiles.rows).fill(-1);
+  const sizes = [];
+  for (let row = 0; row < tiles.rows; row += 1) {
+    for (let col = 0; col < tiles.cols; col += 1) {
+      if (isSolid(tiles, col, row) || label[row * tiles.cols + col] >= 0) continue;
+      const id = sizes.length;
+      let size = 0;
+      const stack = [[col, row]];
+      label[row * tiles.cols + col] = id;
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        size += 1;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= tiles.cols || ny >= tiles.rows) continue;
+          if (isSolid(tiles, nx, ny) || label[ny * tiles.cols + nx] >= 0) continue;
+          label[ny * tiles.cols + nx] = id;
+          stack.push([nx, ny]);
+        }
+      }
+      sizes.push(size);
+    }
+  }
+  const standing = new Int32Array(sizes.length);
+  for (let row = 0; row < tiles.rows - 1; row += 1) {
+    for (let col = 0; col < tiles.cols; col += 1) {
+      const id = label[row * tiles.cols + col];
+      if (id >= 0 && isEmpty(tiles, col, row) && isStandable(tiles, col, row + 1)) standing[id] += 1;
+    }
+  }
+  let best = 0;
+  for (let id = 1; id < sizes.length; id += 1) if (standing[id] > standing[best]) best = id;
+  const world = new Uint8Array(tiles.cols * tiles.rows);
+  for (let i = 0; i < label.length; i += 1) if (label[i] === best) world[i] = 1;
+  return { world, pockets: Math.max(0, sizes.length - 1) };
+}
+
+/** Lists the surfaces of a tile grid, in the world air only. */
 export function findSurfaces(tiles) {
+  const { world, pockets } = findWorldAir(tiles);
   const surfaces = [];
   const at = new Map();
   for (let row = 0; row < tiles.rows - 1; row += 1) {
     let start = -1;
     for (let col = 0; col <= tiles.cols; col += 1) {
-      const standing = col < tiles.cols && isEmpty(tiles, col, row) && isStandable(tiles, col, row + 1);
+      const standing = col < tiles.cols && world[row * tiles.cols + col] === 1 && isEmpty(tiles, col, row) && isStandable(tiles, col, row + 1);
       if (standing && start < 0) start = col;
       if (!standing && start >= 0) {
         const id = surfaces.length;
@@ -30,7 +73,7 @@ export function findSurfaces(tiles) {
       }
     }
   }
-  return { surfaces, at };
+  return { surfaces, at, pockets };
 }
 
 export function surfaceAt(graph, col, row) {
@@ -91,11 +134,33 @@ function addEdge(edges, seen, edge) {
   edges.push({ id: edges.length, ...edge });
 }
 
+const BUCKET = 16;
+
+/** Surfaces by column bucket, so a surface only meets the ones within reach of it. */
+function columnIndex(surfaces) {
+  const buckets = new Map();
+  for (const surface of surfaces) {
+    for (let bucket = Math.floor(surface.x0 / BUCKET); bucket <= Math.floor(surface.x1 / BUCKET); bucket += 1) {
+      if (!buckets.has(bucket)) buckets.set(bucket, []);
+      buckets.get(bucket).push(surface);
+    }
+  }
+  return (a, reach) => {
+    const found = new Set();
+    for (let bucket = Math.floor((a.x0 - reach) / BUCKET); bucket <= Math.floor((a.x1 + reach) / BUCKET); bucket += 1) {
+      for (const surface of buckets.get(bucket) ?? []) found.add(surface);
+    }
+    return found;
+  };
+}
+
 /** Jumps and drops. A drop off an end starts one tile past the end, then falls straight down. */
 function jumpEdges(tiles, graph, physics, edges, seen) {
   const { surfaces } = graph;
+  const near = columnIndex(surfaces);
   for (const a of surfaces) {
-    for (const b of surfaces) {
+    const candidates = [...near(a, physics.maxJumpAcross + 1)].sort((p, q) => p.id - q.id);
+    for (const b of candidates) {
       if (a.id === b.id) continue;
       for (const col of takeoffs(a, b)) {
         const from = { col, row: a.row };

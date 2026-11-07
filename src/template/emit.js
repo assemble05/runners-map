@@ -5,25 +5,37 @@
 import { toRows } from "../grid/tiles.js";
 import { TEMPLATE } from "../config.js";
 
-/** Builds the template object. The entry and exit default to the floor of the lower level. */
-export function toTemplate(tiles, layout, options = {}) {
-  const floorRow = options.entryRow ?? lowerFloorRow(tiles, layout);
+/** Builds the template object. `defaultEntryRow` and `defaultExitRow` come from the profile. */
+export function toTemplate(tiles, options = {}) {
   return {
     name: options.name ?? "map",
     difficulty: options.difficulty ?? TEMPLATE.difficulty,
     weight: options.weight ?? TEMPLATE.weight,
-    entryRow: floorRow,
-    exitRow: options.exitRow ?? floorRow,
+    entryRow: options.entryRow ?? options.defaultEntryRow ?? tiles.rows - 1,
+    exitRow: options.exitRow ?? options.defaultExitRow ?? options.entryRow ?? options.defaultEntryRow ?? tiles.rows - 1,
     rows: toRows(tiles),
   };
 }
 
-function lowerFloorRow(tiles, layout) {
+/** The floor of the lower level: the first standable tile above the bottom in the column next to the left wall. */
+export function lowerFloorRow(tiles, layout) {
   for (let row = tiles.rows - 1; row > layout.separatorRow; row -= 1) {
     const kind = tiles.kinds[row][layout.walls.left.col + 1];
     if (kind !== "empty") return row;
   }
   return tiles.rows - 1;
+}
+
+/** The floors at the ends of a track: the surface that reaches furthest left, and the one furthest right. */
+export function endFloorRows(graph) {
+  if (graph.surfaces.length === 0) return { entry: 0, exit: 0 };
+  let entry = graph.surfaces[0];
+  let exit = graph.surfaces[0];
+  for (const surface of graph.surfaces) {
+    if (surface.x0 < entry.x0 || (surface.x0 === entry.x0 && surface.floorRow > entry.floorRow)) entry = surface;
+    if (surface.x1 > exit.x1 || (surface.x1 === exit.x1 && surface.floorRow > exit.floorRow)) exit = surface;
+  }
+  return { entry: entry.floorRow, exit: exit.floorRow };
 }
 
 /** Serializes the template and the analysis as an ES module. */

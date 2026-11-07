@@ -1,5 +1,6 @@
-// A picture of what the validator saw: tiles, surfaces by role (main route, branch, problem), moves by type.
-// Green is a main route, blue a branch, red a finding, yellow a wall climb, grey a jump or drop.
+// A picture of what the validator saw: tiles, surfaces by role (main route or network, branch, problem), moves
+// by type. Green is a main route, blue a branch, red an error, orange a warning, yellow a wall climb, grey a jump
+// or drop.
 
 import { encodePng } from "../image/png.js";
 import { EDGE } from "../graph/surfaces.js";
@@ -8,10 +9,10 @@ const COLORS = Object.freeze({
   empty: [20, 17, 32],
   solid: [58, 52, 80],
   platform: [133, 122, 176],
-  separator: [93, 84, 125],
   main: [76, 175, 80],
   branch: [66, 133, 244],
   problem: [229, 57, 53],
+  warning: [255, 152, 0],
   wall: [242, 193, 78],
   move: [150, 150, 150],
 });
@@ -52,6 +53,38 @@ function painter(width, height) {
   return { rgba, box, line };
 }
 
+function roles(validation) {
+  const role = new Map();
+  const report = validation.report ?? {};
+  for (const level of report.levels ?? []) {
+    for (const id of level.main) role.set(id, COLORS.main);
+    for (const branch of level.branches) for (const id of branch.surfaces) role.set(id, COLORS.branch);
+  }
+  for (const id of report.network ?? []) role.set(id, COLORS.main);
+  const mark = (findings, color) => {
+    for (const finding of findings) {
+      if (finding.surface !== undefined) role.set(finding.surface, color);
+      for (const id of finding.surfaces ?? []) role.set(id, color);
+    }
+  };
+  mark(validation.warnings, COLORS.warning);
+  mark(validation.errors, COLORS.problem);
+  return role;
+}
+
+function edgeColors(validation) {
+  const colors = new Map();
+  for (const finding of validation.warnings) {
+    if (finding.edge !== undefined) colors.set(finding.edge, COLORS.warning);
+    for (const id of finding.edges ?? []) colors.set(id, COLORS.warning);
+  }
+  for (const finding of validation.errors) {
+    if (finding.edge !== undefined) colors.set(finding.edge, COLORS.problem);
+    for (const id of finding.edges ?? []) colors.set(id, COLORS.problem);
+  }
+  return colors;
+}
+
 /** Renders the tiles, the graph and the validation into a PNG byte array. */
 export function renderPreview(tiles, graph, validation) {
   const width = tiles.cols * SCALE;
@@ -62,23 +95,15 @@ export function renderPreview(tiles, graph, validation) {
       paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS[tiles.kinds[row][col]]);
     }
   }
-  const role = new Map();
-  for (const level of validation.report.levels) {
-    for (const id of level.main) role.set(id, COLORS.main);
-    for (const branch of level.branches) for (const id of branch.surfaces) role.set(id, COLORS.branch);
-  }
-  for (const finding of validation.errors) {
-    if (finding.surface !== undefined) role.set(finding.surface, COLORS.problem);
-    for (const id of finding.surfaces ?? []) role.set(id, COLORS.problem);
-  }
+  const role = roles(validation);
   for (const surface of graph.surfaces) {
     const color = role.get(surface.id) ?? COLORS.move;
     paint.box(surface.x0 * SCALE, surface.row * SCALE + SCALE - 2, (surface.x1 - surface.x0 + 1) * SCALE, 2, color);
   }
-  const problemEdges = new Set(validation.errors.map((finding) => finding.edge).filter((id) => id !== undefined));
+  const colors = edgeColors(validation);
+  const half = Math.floor(SCALE / 2);
   for (const edge of graph.edges) {
-    const color = problemEdges.has(edge.id) ? COLORS.problem : edge.type === EDGE.WALL ? COLORS.wall : COLORS.move;
-    const half = Math.floor(SCALE / 2);
+    const color = colors.get(edge.id) ?? (edge.type === EDGE.WALL ? COLORS.wall : COLORS.move);
     paint.line(edge.from.col * SCALE + half, edge.from.row * SCALE + half, edge.to.col * SCALE + half, edge.to.row * SCALE + half, color);
   }
   return encodePng({ width, height, rgba: paint.rgba });
