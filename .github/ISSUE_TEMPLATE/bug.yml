@@ -1,0 +1,24 @@
+name: Bug
+description: A map accepted that should not be, or rejected that should not be.
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: map
+    attributes:
+      label: The map
+      description: Rows in a fenced block, or attach the PNG.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happens
+      description: The findings printed, with their codes.
+    validations:
+      required: true

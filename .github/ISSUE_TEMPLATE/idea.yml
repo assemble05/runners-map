@@ -1,0 +1,14 @@
+name: Idea
+description: Something to decide before it becomes a task.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why

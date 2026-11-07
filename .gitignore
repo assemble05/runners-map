@@ -1,0 +1,6 @@
+node_modules/
+records/
+records-smoke/
+*.log
+test/golden/*.preview.png
+test/golden/*.report.json
