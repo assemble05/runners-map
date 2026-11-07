@@ -15,7 +15,7 @@
     "render": "node tools/render.mjs",
     "fixtures": "node tools/rows-to-png.mjs test/fixtures/two-levels.rows.txt test/fixtures/two-levels.png",
     "golden": "node tools/convert.mjs test/fixtures/two-levels.rows.txt --out test/golden --name two-levels",
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.mjs\"",
     "docs": "node scripts/check-docs.mjs",
     "check": "npm test && npm run docs"
   }
