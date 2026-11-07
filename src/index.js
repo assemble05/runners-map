@@ -61,10 +61,11 @@ export function analyzeTiles(tiles, options = {}) {
   return analyzeTwoLevels(tiles, options, profile, physics, rules);
 }
 
-/** Analyzes a PNG. Options as analyzeTiles plus tile, coverage, threshold, platformGray. */
+/** Analyzes a PNG. Options as analyzeTiles plus tile, coverage, threshold, platformGray and whiteIsAir
+ * (a corridor drawing: white is the open path, black is rock; the default is white rock on black air). */
 export function analyzeImage(bytes, options = {}) {
   const image = decodePng(bytes);
-  const cells = toCells(image, { threshold: options.threshold ?? IMAGE.threshold, platformGray: options.platformGray });
+  const cells = toCells(image, { threshold: options.threshold ?? IMAGE.threshold, platformGray: options.platformGray, whiteIsAir: options.whiteIsAir });
   const tiles = toTiles(cells, { tile: options.tile ?? IMAGE.tile, coverage: options.coverage ?? IMAGE.coverage });
   const result = analyzeTiles(tiles, options);
   result.validation.warnings = [...tiles.warnings.map((message) => ({ code: "IMAGE", message })), ...result.validation.warnings];

@@ -12,6 +12,7 @@ export function analysisOptions(options) {
     tile: options.tile,
     separatorRow: options.splitRow,
     platformGray: options.platformGray === true,
+    whiteIsAir: options.whiteIsAir === true,
   };
 }
 
