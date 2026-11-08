@@ -64,6 +64,7 @@ proposal in `src/config.js`, to be confirmed by the owner.
 | `ROUTES` | error | More ways round the track from the spawn point than `maxRoutes`. The game alternates between them from lap to lap, so the count must stay small. | Remove a split, or join two of them. |
 | `SCREEN` | error | A split whose box is wider than 26 tiles or taller than 15 (the 320 x 180 px screen at 12 px a tile): the runner cannot see both ways at once. | Bring the junctions of the split closer together, or shrink the pocket it goes round. |
 | `START` | error | The spawn point (the floor at the left end of the track) is not on a way round the track: it sits on a dead end, or off the track. | Put the left end of the track on a loop. |
+| `RUN_HEIGHT` | error | A floor tile with less air above it than the running height: 1.5 x the double jump's apex, 10.34 tiles measured on the engine, so 16 tiles. | Make the passage taller: the runner must be able to double jump under the ceiling. |
 
 ## How laps are measured (zerun-laps)
 
@@ -72,7 +73,31 @@ and ends are the nodes, and dead ends are pruned again and again: a branch that 
 simple cycle of what is left. The spawn point is the floor at the left end of the track (the lowest one if several share
 that column), the entry the template uses. ROUTES counts the simple cycles through the centreline tile nearest to it: the
 laps. A split is a pocket of enclosed rock whose edge holds two or more junctions; its box is the pocket and one tile of
-corridor round it.
+corridor round it. The owner chose this box on 08/11: the stricter box, with both options whole, leaves no choice that fits a 15-tile screen when the passages are 16 tiles tall.
+
+## The running height (zerun-laps)
+
+Every floor tile of the track is a part the runner runs through (08/11, the owner), so the air above each one must reach
+1.5 x the double jump's apex. The apex is 10.34 tiles, measured on Zerun's engine: the best double jump of the current
+code, the first jump held 16 ticks and the second pressed one tick after the release. A comment in Zerun's
+`FixedCourseGeneratorService` says 7.8; the code does not give that, and with 7.8 the height would be 12 tiles. The air
+is counted up to the first solid tile; a platform is passed through, so it is not a ceiling. Sixteen tiles is taller than
+the 15-tile screen, so such a passage cannot be seen whole at once. The owner accepted that on 08/11.
+
+## The schematic (zerun-laps)
+
+A track can be drawn as rooms and corridors instead of a sketch (08/11, the owner):
+`node tools/schematic.mjs <schematic.json> [--out dir] [--run-height N]`. The file lists rectangles of air,
+`{ "kind": "run" | "slide", "col", "row", "cols", "rows" }`, with columns and rows from 1 (column 0 and row 0 are rock)
+and the last world row kept as rock. The air is the union of the rectangles; the rest is rock. A `run` rectangle is a
+part the runner runs through, and the floors under it must have the running height above them. A `slide` rectangle is a
+low tunnel: it must be at least 2 tiles tall, and the floors under it are exempt from the running height. The command
+writes `<name>.template.js` and `<name>.report.json`, and it runs the same findings as the drawing.
+
+| Code | Severity | Meaning | Fix |
+| --- | --- | --- | --- |
+| `SCHEMATIC` | error | The file is not a schematic: no rectangle list, an unknown kind, a value that is not an integer, or a rectangle outside the world. Nothing is generated. | Fix the rectangle the message names. |
+| `SLIDE_LOW` | error | A slide tunnel is shorter than the 2 tiles the runner needs to slide through. | Make the tunnel 2 tiles tall or more, or make it a run rectangle. |
 
 ## How a branch is measured (two-levels)
 

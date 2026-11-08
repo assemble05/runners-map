@@ -52,12 +52,24 @@ export const ZERUN_CIRCUIT_RULES = Object.freeze({ ...CIRCUIT_RULES, worldRows: 
 // The screen the runner sees at once: Zerun draws the run on 320 x 180 px (ADR 0003), so 26 x 15 tiles of 12 px.
 export const SCREEN = Object.freeze({ widthPx: 320, heightPx: 180 });
 
+// The running height (decided 08/11 by the owner): a part that is run through needs 1.5 x the double jump's apex as air
+// above it. The apex is measured on Zerun's engine (RunnerReducer, 60 ticks a second, 12 px tiles): the best double jump,
+// the first jump held 16 ticks and the second pressed one tick after the release, reaches 10.34 tiles. A comment in
+// FixedCourseGeneratorService says 7.8; the current code does not give that number.
+export const DOUBLE_JUMP_APEX_TILES = 10.34;
+export const RUN_CLEARANCE_FACTOR = 1.5;
+
 // zerun-laps (decided 08/11 by the owner): a closed circuit played lap after lap. Holes are not judged, and lanes are
 // not either: what is judged is how many ways round there are (ROUTES) and whether each split fits the screen (SCREEN).
 // maxRoutes is a proposal of this file, to be confirmed by the owner; it is far under the 200 that is too many.
 export const ZERUN_LAPS_RULES = Object.freeze({
   ...ZERUN_CIRCUIT_RULES,
   minTwoLaneShare: 0,
+  runHeight: Object.freeze({
+    apexTiles: DOUBLE_JUMP_APEX_TILES,
+    factor: RUN_CLEARANCE_FACTOR,
+    minTiles: Math.ceil(RUN_CLEARANCE_FACTOR * DOUBLE_JUMP_APEX_TILES),
+  }),
   laps: Object.freeze({
     maxRoutes: 64,
     screenCols: Math.floor(SCREEN.widthPx / WORLD.tilePx),

@@ -10,6 +10,7 @@ import { bridges, components, degree } from "../graph/analysis.js";
 import { checkWorld } from "./rules.js";
 import { CIRCUIT_RULES } from "../config.js";
 import { lapsOf } from "./laps.js";
+import { runHeightOf } from "./run.js";
 
 function pct(ratio) {
   return `${Math.round(ratio * 1000) / 10}%`;
@@ -87,6 +88,15 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
       }
     }
   }
+  // the running height (zerun-laps): the air above every floor tile reaches 1.5 x the double jump's apex
+  let run = null;
+  if (rules.runHeight) {
+    const { minTiles, factor, apexTiles } = rules.runHeight;
+    run = runHeightOf(tiles, minTiles, rules.runHeight.exempt ?? null);
+    if (run.low > 0) {
+      errors.push({ code: "RUN_HEIGHT", message: `${run.low} of ${run.floors} floor tiles (${Math.round(run.share * 1000) / 10}%) have less than ${minTiles} tiles of air above them; a part run through needs ${factor} x the ${apexTiles}-tile double jump` });
+    }
+  }
   const report = {
     profile: rules.laps ? "zerun-laps" : "circuit",
     surfaces: graph.surfaces.length,
@@ -99,6 +109,7 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
     bridges: bridgeEdges,
     lanes: { two: round(two), three: round(three) },
     ...(laps ? { laps: { routes: laps.routes, exact: laps.exact, network: laps.network, junctions: laps.junctions, stubs: laps.stubs, splits: laps.splits, start: laps.start } } : {}),
+    ...(run ? { run } : {}),
   };
   return { ok: errors.length === 0, errors, warnings, report };
 }
