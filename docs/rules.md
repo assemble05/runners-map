@@ -5,8 +5,7 @@ Every rule the validator applies is a finding with a code. Errors reject the map
 fidelity floor) are in `src/config.js`; the reasons are in ADR 0003, ADR 0004, ADR 0005, ADR 0007 and ADR 0008.
 The owner's statement of the branch rules is kept verbatim in `docs/product/branch-rules.pt-BR.md`.
 
-The profile (`--profile two-levels`, the default of `convert`; `zerun-circuit`, the default of `import`; or
-`circuit`) decides which rules run and how severe a shared finding is: `ISOLATED`, `DEAD_END` and `BRIDGE` are
+The profile (`--profile two-levels`, the default of `convert`; `zerun-circuit`, the default of `import`; `circuit`; or `zerun-laps`) decides which rules run and how severe a shared finding is: `ISOLATED`, `DEAD_END` and `BRIDGE` are
 errors for a two-level piece and warnings for a circuit, because the reference race maps carry a few of each.
 
 ## Every profile
@@ -53,6 +52,27 @@ errors for a two-level piece and warnings for a circuit, because the reference r
 | `BRIDGE` | warning | Moves that are the only link between two parts. | Add a second route around each. |
 | `FEW_LANES` | warning | Fewer than 30% of the columns offer three or more surfaces; the reference maps have at least 40%. | Add a third lane where the track is long and flat. |
 | `POCKETS` | warning | Sealed air regions were ignored (ADR 0007). | Nothing, unless a pocket was meant to be reachable. |
+
+## Lap profile (`zerun-laps`)
+
+The closed circuit played lap after lap (08/11, the owner). Same physics and world as `zerun-circuit`. Lanes are not
+judged and holes are never judged; two findings replace the lane rules. The count of ways round (`maxRoutes`, 64) is a
+proposal in `src/config.js`, to be confirmed by the owner.
+
+| Code | Severity | Meaning | Fix |
+| --- | --- | --- | --- |
+| `ROUTES` | error | More ways round the track from the spawn point than `maxRoutes`. The game alternates between them from lap to lap, so the count must stay small. | Remove a split, or join two of them. |
+| `SCREEN` | error | A split whose box is wider than 26 tiles or taller than 15 (the 320 x 180 px screen at 12 px a tile): the runner cannot see both ways at once. | Bring the junctions of the split closer together, or shrink the pocket it goes round. |
+| `START` | error | The spawn point (the floor at the left end of the track) is not on a way round the track: it sits on a dead end, or off the track. | Put the left end of the track on a loop. |
+
+## How laps are measured (zerun-laps)
+
+The passable air is thinned to a one-tile centreline (Zhang-Suen, as stubs do); a diagonal step is one link. Junctions
+and ends are the nodes, and dead ends are pruned again and again: a branch that stops is not a way round. A route is a
+simple cycle of what is left. The spawn point is the floor at the left end of the track (the lowest one if several share
+that column), the entry the template uses. ROUTES counts the simple cycles through the centreline tile nearest to it: the
+laps. A split is a pocket of enclosed rock whose edge holds two or more junctions; its box is the pocket and one tile of
+corridor round it.
 
 ## How a branch is measured (two-levels)
 

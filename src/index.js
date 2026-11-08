@@ -67,7 +67,7 @@ function analyzeTwoLevels(tiles, options, profile, physics, rules) {
  * weight, entryRow, exitRow. */
 export function analyzeTiles(tiles, options = {}) {
   const { profile, physics, rules } = presetFor(options);
-  if (profile === "circuit" || profile === "zerun-circuit") return analyzeCircuit(tiles, options, profile, physics, rules);
+  if (profile === "circuit" || profile === "zerun-circuit" || profile === "zerun-laps") return analyzeCircuit(tiles, options, profile, physics, rules);
   return analyzeTwoLevels(tiles, options, profile, physics, rules);
 }
 

@@ -9,6 +9,7 @@
 import { bridges, components, degree } from "../graph/analysis.js";
 import { checkWorld } from "./rules.js";
 import { CIRCUIT_RULES } from "../config.js";
+import { lapsOf } from "./laps.js";
 
 function pct(ratio) {
   return `${Math.round(ratio * 1000) / 10}%`;
@@ -30,6 +31,15 @@ export function laneShare(graph, cols, n) {
     if (count >= n) stacked += 1;
   }
   return used === 0 ? 0 : stacked / used;
+}
+
+/** The spawn point of a circuit: the floor at the left end of the track (the lowest one if several share that column). */
+function spawnOf(graph) {
+  let entry = null;
+  for (const surface of graph.surfaces) {
+    if (!entry || surface.x0 < entry.x0 || (surface.x0 === entry.x0 && surface.floorRow > entry.floorRow)) entry = surface;
+  }
+  return entry ? { col: entry.x0, row: entry.floorRow - 1 } : null;
 }
 
 export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
@@ -60,8 +70,25 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
   if (two < rules.minTwoLaneShare) errors.push({ code: "SINGLE_LANE", message: `only ${pct(two)} of the columns offer two or more surfaces; the minimum is ${pct(rules.minTwoLaneShare)}` });
   if (three < rules.minThreeLaneShare) warnings.push({ code: "FEW_LANES", message: `only ${pct(three)} of the columns offer three or more surfaces; the reference maps have at least ${pct(rules.minThreeLaneShare)}` });
   if (graph.pockets > 0) warnings.push({ code: "POCKETS", message: `${graph.pockets} sealed air region(s) were ignored` });
+  // the laps rule (zerun-laps): few enough ways round the track, and every split fits the screen; holes are not judged
+  let laps = null;
+  if (rules.laps) {
+    const { maxRoutes, screenCols, screenRows } = rules.laps;
+    const start = rules.laps.start ?? spawnOf(graph);
+    laps = lapsOf(tiles, { routeLimit: maxRoutes, screen: { cols: screenCols, rows: screenRows }, start });
+    if (laps.start?.offTrack) errors.push({ code: "START", message: `the spawn point (col ${start.col}, row ${start.row}) is not on a way round the track` });
+    if (laps.routes > maxRoutes) {
+      errors.push({ code: "ROUTES", message: `the spawn point lies on ${laps.exact ? laps.routes : `more than ${maxRoutes}`} ways round the track; the game alternates between at most ${maxRoutes}` });
+    }
+    for (const split of laps.splits) {
+      if (!split.fits) {
+        const [c0, r0, c1, r1] = split.box;
+        errors.push({ code: "SCREEN", message: `the way splits at cols ${c0}-${c1}, rows ${r0}-${r1} (${split.cols}x${split.rows} tiles); the screen shows ${screenCols}x${screenRows}, so the runner cannot see both ways at once` });
+      }
+    }
+  }
   const report = {
-    profile: "circuit",
+    profile: rules.laps ? "zerun-laps" : "circuit",
     surfaces: graph.surfaces.length,
     edges: graph.edges.length,
     links: graph.links.length,
@@ -71,6 +98,7 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
     deadEnds,
     bridges: bridgeEdges,
     lanes: { two: round(two), three: round(three) },
+    ...(laps ? { laps: { routes: laps.routes, exact: laps.exact, network: laps.network, junctions: laps.junctions, stubs: laps.stubs, splits: laps.splits, start: laps.start } } : {}),
   };
   return { ok: errors.length === 0, errors, warnings, report };
 }

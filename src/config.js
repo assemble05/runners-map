@@ -49,10 +49,27 @@ export const CIRCUIT_RULES = Object.freeze({
 
 export const ZERUN_CIRCUIT_RULES = Object.freeze({ ...CIRCUIT_RULES, worldRows: WORLD.rows });
 
+// The screen the runner sees at once: Zerun draws the run on 320 x 180 px (ADR 0003), so 26 x 15 tiles of 12 px.
+export const SCREEN = Object.freeze({ widthPx: 320, heightPx: 180 });
+
+// zerun-laps (decided 08/11 by the owner): a closed circuit played lap after lap. Holes are not judged, and lanes are
+// not either: what is judged is how many ways round there are (ROUTES) and whether each split fits the screen (SCREEN).
+// maxRoutes is a proposal of this file, to be confirmed by the owner; it is far under the 200 that is too many.
+export const ZERUN_LAPS_RULES = Object.freeze({
+  ...ZERUN_CIRCUIT_RULES,
+  minTwoLaneShare: 0,
+  laps: Object.freeze({
+    maxRoutes: 64,
+    screenCols: Math.floor(SCREEN.widthPx / WORLD.tilePx),
+    screenRows: Math.floor(SCREEN.heightPx / WORLD.tilePx),
+  }),
+});
+
 export const PROFILES = Object.freeze({
   "two-levels": { physics: PHYSICS, rules: RULES },
   circuit: { physics: CIRCUIT_PHYSICS, rules: CIRCUIT_RULES },
   "zerun-circuit": { physics: PHYSICS, rules: ZERUN_CIRCUIT_RULES },
+  "zerun-laps": { physics: PHYSICS, rules: ZERUN_LAPS_RULES },
 });
 
 export const IMAGE = Object.freeze({
