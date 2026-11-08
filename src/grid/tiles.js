@@ -1,6 +1,8 @@
-// Cells to tiles. A tile is a 12 x 12 px cell of the course (Zerun GLOSSARY). A tile is solid or platform when
-// at least `coverage` of its pixels are, which forgives antialiasing and a brush that is a pixel off the grid.
-// Rows use the characters of Zerun's TemplateUtil: '#' solid, '=' platform, '.' empty.
+// Cells to tiles. A tile is a square cell of the course (12 x 12 px in Zerun, GLOSSARY). A tile is solid or
+// platform when at least `coverage` of its pixels are, which forgives antialiasing and a brush a pixel off the
+// grid. Rows use the characters of Zerun's TemplateUtil: '#' solid, '=' platform, '.' empty, and the entity and
+// hazard characters as marks on a tile ('W' barrier, 'B' box, 'c' coin, 'P' power, 's' skull, 'N' npc,
+// 'K' skeleton, 't' torch, '^' 'v' spikes, '-' laser, '>' boost). A barrier or a box blocks the runner.
 
 import { CELL } from "../image/binarize.js";
 
@@ -9,9 +11,19 @@ export const KIND = Object.freeze({ EMPTY: "empty", SOLID: "solid", PLATFORM: "p
 export const CHAR_TO_KIND = Object.freeze({ ".": KIND.EMPTY, "#": KIND.SOLID, "=": KIND.PLATFORM });
 export const KIND_TO_CHAR = Object.freeze({ [KIND.EMPTY]: ".", [KIND.SOLID]: "#", [KIND.PLATFORM]: "=" });
 
+/** Characters Zerun's TemplateUtil accepts on top of a tile, and the kind of tile they sit on. */
+export const MARK_KINDS = Object.freeze({ W: KIND.EMPTY, B: KIND.EMPTY, c: KIND.EMPTY, P: KIND.EMPTY, s: KIND.EMPTY, N: KIND.EMPTY, K: KIND.EMPTY, t: KIND.EMPTY, "^": KIND.EMPTY, v: KIND.EMPTY, "-": KIND.EMPTY, ">": KIND.SOLID });
+
+/** Marks the runner cannot pass through: a barrier and a box have HP and stand in the way. */
+export const BLOCKING_MARKS = Object.freeze(new Set(["W", "B"]));
+
 const DEFAULTS = Object.freeze({ tile: 12, coverage: 0.5 });
 
-/** Converts a cell grid into a tile grid: { cols, rows, kinds, warnings }. */
+function markKey(col, row) {
+  return `${col},${row}`;
+}
+
+/** Converts a cell grid into a tile grid: { cols, rows, kinds, marks, warnings }. */
 export function toTiles(grid, options = {}) {
   const { tile, coverage } = { ...DEFAULTS, ...options };
   const cols = Math.floor(grid.width / tile);
@@ -39,20 +51,43 @@ export function toTiles(grid, options = {}) {
     }
     kinds.push(line);
   }
-  return { cols, rows, kinds, warnings };
+  return { cols, rows, kinds, marks: new Map(), warnings };
 }
 
-/** Parses template rows ('#', '=', '.'; other characters count as empty) into a tile grid. */
+/** Parses template rows ('#', '=', '.', and Zerun's mark characters; anything else is empty) into a tile grid. */
 export function fromRows(rowsText) {
-  const kinds = rowsText.map((line) => Array.from(line, (ch) => CHAR_TO_KIND[ch] ?? KIND.EMPTY));
+  const marks = new Map();
+  const kinds = rowsText.map((line, row) =>
+    Array.from(line, (ch, col) => {
+      if (CHAR_TO_KIND[ch] !== undefined) return CHAR_TO_KIND[ch];
+      if (MARK_KINDS[ch] !== undefined) {
+        marks.set(markKey(col, row), ch);
+        return MARK_KINDS[ch];
+      }
+      return KIND.EMPTY;
+    }),
+  );
   const cols = Math.max(0, ...kinds.map((line) => line.length));
   for (const line of kinds) while (line.length < cols) line.push(KIND.EMPTY);
-  return { cols, rows: kinds.length, kinds, warnings: [] };
+  return { cols, rows: kinds.length, kinds, marks, warnings: [] };
 }
 
-/** Serializes a tile grid as template rows. */
+/** Serializes a tile grid as template rows. A mark wins over the kind of its tile. */
 export function toRows(tiles) {
-  return tiles.kinds.map((line) => line.map((kind) => KIND_TO_CHAR[kind]).join(""));
+  return tiles.kinds.map((line, row) => line.map((kind, col) => tiles.marks?.get(markKey(col, row)) ?? KIND_TO_CHAR[kind]).join(""));
+}
+
+/** A deep copy, so a treatment never touches the grid it was given. */
+export function cloneTiles(tiles) {
+  return { cols: tiles.cols, rows: tiles.rows, kinds: tiles.kinds.map((line) => [...line]), marks: new Map(tiles.marks ?? []), warnings: [...(tiles.warnings ?? [])] };
+}
+
+export function markAt(tiles, col, row) {
+  return tiles.marks?.get(markKey(col, row)) ?? null;
+}
+
+export function setMark(tiles, col, row, mark) {
+  tiles.marks.set(markKey(col, row), mark);
 }
 
 export function isSolid(tiles, col, row) {
@@ -66,4 +101,20 @@ export function isStandable(tiles, col, row) {
 
 export function isEmpty(tiles, col, row) {
   return tiles.kinds[row]?.[col] === KIND.EMPTY;
+}
+
+export function isBlocked(tiles, col, row) {
+  const mark = markAt(tiles, col, row);
+  return mark !== null && BLOCKING_MARKS.has(mark);
+}
+
+/** Air the runner can move through: not solid and not blocked. A thin platform is passed through. */
+export function isPassable(tiles, col, row) {
+  if (row < 0 || row >= tiles.rows || col < 0 || col >= tiles.cols) return false;
+  return !isSolid(tiles, col, row) && !isBlocked(tiles, col, row);
+}
+
+/** Air the runner can stand in: an empty tile that is not blocked. */
+export function isAir(tiles, col, row) {
+  return isEmpty(tiles, col, row) && !isBlocked(tiles, col, row);
 }

@@ -1,11 +1,13 @@
-// The rules of the circuit profile: a race track that is one network with parallel lanes (ADR 0007).
+// The rules of the circuit profiles: a race track that is one network with parallel lanes (ADR 0007).
 //
 // Errors: no surface at all; the main network holds less than minNetworkShare of the surfaces; fewer than
-// minTwoLaneShare of the columns offer a choice of two surfaces. Warnings: surfaces outside the main network,
-// dead ends, bridges, few three-lane columns, sealed air regions ignored. The reference maps pass the errors
-// and carry some of the warnings, so a warning is information, not a verdict.
+// minTwoLaneShare of the columns offer a choice of two surfaces; the piece does not fit the game's world.
+// Warnings: surfaces outside the main network, dead ends, bridges, few three-lane columns, sealed air regions
+// ignored, low ceilings. The reference maps pass the errors and carry some of the warnings, so a warning is
+// information, not a verdict.
 
 import { bridges, components, degree } from "../graph/analysis.js";
+import { checkWorld } from "./rules.js";
 import { CIRCUIT_RULES } from "../config.js";
 
 function pct(ratio) {
@@ -37,6 +39,7 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
     errors.push({ code: "NO_SURFACES", message: "no tile to stand on: nothing is white over black, or the tile size is wrong" });
     return { ok: false, errors, warnings, report: { profile: "circuit", surfaces: 0, edges: 0, links: 0, pockets: graph.pockets, networkShare: 0, network: [], deadEnds: [], bridges: [], lanes: { two: 0, three: 0 } } };
   }
+  checkWorld(tiles, graph, rules, errors, warnings);
   const parts = components(graph);
   const sizes = new Map();
   for (const [, part] of parts.of) sizes.set(part, (sizes.get(part) ?? 0) + 1);

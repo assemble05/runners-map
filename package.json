@@ -1,7 +1,7 @@
 {
   "name": "runners-map",
-  "version": "0.2.0",
-  "description": "Map templates for a platform race, drawn as an image, validated as a graph and emitted as the game's template module. Two profiles: the owner's two-level piece and a race circuit calibrated on SpeedRunners maps.",
+  "version": "0.3.0",
+  "description": "Map templates for a platform race from an attached drawing: tiles, a graph the runner can be asked about, rules as findings, fidelity against the drawing, dead-end stubs as decoration, one template per entry and exit, and the game's template module.",
   "type": "module",
   "license": "MIT",
   "private": true,
@@ -10,12 +10,16 @@
     ".": "./src/index.js"
   },
   "scripts": {
+    "measure": "node tools/measure.mjs",
+    "import": "node tools/import.mjs",
+    "compare": "node tools/compare.mjs",
     "convert": "node tools/convert.mjs",
     "validate": "node tools/validate.mjs",
     "render": "node tools/render.mjs",
     "fixtures": "node tools/rows-to-png.mjs test/fixtures/two-levels.rows.txt test/fixtures/two-levels.png",
     "golden": "node tools/convert.mjs test/fixtures/two-levels.rows.txt --out test/golden --name two-levels",
     "golden:speedrunners": "node scripts/golden-speedrunners.mjs",
+    "golden:drawings": "node scripts/golden-drawings.mjs",
     "test": "node --test \"test/*.test.mjs\"",
     "docs": "node scripts/check-docs.mjs",
     "check": "npm test && npm run docs"

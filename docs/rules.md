@@ -1,19 +1,24 @@
 # Findings
 
 Every rule the validator applies is a finding with a code. Errors reject the map; warnings do not. The numbers
-(5%, 40%, the reach of a jump, the extremity zone, the network share) are in `src/config.js`; the reasons are in
-ADR 0003, ADR 0004, ADR 0005 and ADR 0007. The owner's statement of the branch rules is kept verbatim in
-`docs/product/branch-rules.pt-BR.md`.
+(5%, 40%, the reach of a jump, the extremity zone, the network share, the headroom, the world's rows, the
+fidelity floor) are in `src/config.js`; the reasons are in ADR 0003, ADR 0004, ADR 0005, ADR 0007 and ADR 0008.
+The owner's statement of the branch rules is kept verbatim in `docs/product/branch-rules.pt-BR.md`.
 
-The profile (`--profile two-levels`, the default, or `--profile circuit`) decides which rules run and how
-severe a shared finding is: `ISOLATED`, `DEAD_END` and `BRIDGE` are errors for a two-level piece and warnings
-for a circuit, because the reference race maps carry a few of each.
+The profile (`--profile two-levels`, the default of `convert`; `zerun-circuit`, the default of `import`; or
+`circuit`) decides which rules run and how severe a shared finding is: `ISOLATED`, `DEAD_END` and `BRIDGE` are
+errors for a two-level piece and warnings for a circuit, because the reference race maps carry a few of each.
 
-## Both profiles
+## Every profile
 
 | Code | Severity | Meaning | Fix |
 | --- | --- | --- | --- |
 | `IMAGE` | warning | The image is not a multiple of the tile; the remainder was dropped. | Resize to a multiple of the tile. |
+| `LOW_CEILING` | warning | Standing tiles with room to slide but not to stand (Zerun: 2 tiles of air, not 3). | Raise the ceiling or the platform by a tile, or accept a slide section. |
+| `CRUSHED` | warning | Tiles over a floor too low even to slide through (Zerun: 1 tile of air); left out of the graph. | Redraw the corridor thicker, or use a smaller tile. |
+| `TOO_TALL` | error | The piece is taller than the game's world (Zerun: 60 rows). Zerun profiles only. | Use a bigger tile, a shorter drawing, or raise the world in the engine. |
+| `LOW_FIDELITY` | error | The tiles keep less of the drawing than `minFidelity` (97%). Import only. | Use a smaller tile or a cleaner drawing; look at the diff picture. |
+| `STUB` | warning | Dead-end corridors left as drawn (`--dead-ends keep`). Import only. | Treat them with `barrier` or `fill`, or redraw. |
 
 ## Two-levels profile
 
@@ -36,11 +41,11 @@ for a circuit, because the reference race maps carry a few of each.
 | `BRANCHES_CLUSTERED` | warning | All branches of a level sit in the same third of it. | Spread them out. |
 | `BRANCHES_SAME_LENGTH` | warning | All branches of a level have the same length. | Vary them. |
 
-## Circuit profile
+## Circuit profiles (`circuit`, `zerun-circuit`)
 
 | Code | Severity | Meaning | Fix |
 | --- | --- | --- | --- |
-| `NO_SURFACES` | error | Nothing to stand on: nothing is white over black, or the tile size is wrong. | Check the image and `--tile`. |
+| `NO_SURFACES` | error | Nothing to stand on: nothing is white over black, or the tile size is wrong. | Check the image, `--tile` and `--white-is-air`. |
 | `FRAGMENTED` | error | The main network holds less than 90% of the surfaces. | Join the detached parts, or remove them. |
 | `SINGLE_LANE` | error | Fewer than 80% of the columns offer two or more surfaces. | Add a second lane: a platform above or a floor below the track. |
 | `ISOLATED` | warning | Surfaces outside the main network. | Join them or remove them. |
@@ -61,3 +66,11 @@ column it comes back, divided by the width of the level between the outer walls.
 
 For every column that holds at least one surface, count the surfaces stacked in it. The two-lane share is the
 part of those columns with two or more; the three-lane share, with three or more.
+
+## How a dead-end corridor is found and treated (import)
+
+The world air is thinned to a one-tile skeleton. An endpoint of the skeleton is a corridor that stops; the path
+from it to the first junction is the stub and its length the depth; spurs shorter than the median corridor height
+(at least `minStubDepth`, 3) are corners. The mouth is the corridor's cross-section at the junction. `barrier`
+puts a `W` on every mouth tile; `fill` turns the stub's air to rock; `keep` reports it. The preview tints a
+treated stub's air brown and a barrier magenta.
