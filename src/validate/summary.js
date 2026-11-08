@@ -24,3 +24,26 @@ export function summarize(result) {
     lanes: report.lanes ?? null,
   };
 }
+
+/** The account of an import: the drawing's fidelity, corridors, topology, and each variant's summary. */
+export function summarizeImport(imported) {
+  return {
+    profile: imported.profile,
+    tile: imported.tile,
+    topology: imported.topology,
+    openings: { left: imported.openings.left.length, right: imported.openings.right.length },
+    corridors: imported.corridors,
+    fidelity: imported.fidelity.fidelity,
+    minStubDepth: imported.minStubDepth,
+    treatment: imported.treatment,
+    ok: imported.ok,
+    variants: imported.variants.map((variant) => ({
+      name: variant.name,
+      entryRow: variant.result.template.entryRow,
+      exitRow: variant.result.template.exitRow,
+      fidelity: variant.fidelity.fidelity,
+      stubs: variant.stubs.map((stub) => ({ direction: stub.direction, depth: stub.depth, width: stub.width, cells: stub.cells, sealed: stub.sealed, treatment: stub.treatment, mouth: stub.mouth })),
+      ...summarize(variant.result),
+    })),
+  };
+}

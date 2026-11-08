@@ -3,8 +3,8 @@ export const template = {
   name: "two-levels",
   difficulty: 0.3,
   weight: 1,
-  entryRow: 15,
-  exitRow: 15,
+  entryRow: 16,
+  exitRow: 16,
   rows: [
     "########################################",
     "#......................................#",
@@ -21,6 +21,7 @@ export const template = {
     "#.........#########....................#",
     "#......................................#",
     "#......................................#",
+    "#......................................#",
     "########################################",
   ],
 };
@@ -32,16 +33,18 @@ export const analysis = {
     "left": {
       "col": 0,
       "top": 0,
-      "bottom": 15
+      "bottom": 16
     },
     "right": {
       "col": 39,
       "top": 0,
-      "bottom": 15
+      "bottom": 16
     }
   },
   "surfaces": 4,
   "edges": 12,
+  "links": 6,
+  "pockets": 0,
   "crossLevel": {
     "left": [
       4,
@@ -58,7 +61,7 @@ export const analysis = {
       "name": "lower",
       "floorRows": [
         9,
-        15
+        16
       ],
       "main": [
         3
