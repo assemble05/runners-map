@@ -1,6 +1,6 @@
 ---
 name: runners-map
-description: Turn an attached drawing of a course (PNG) into Zerun templates with proof, using the runners-map import: fidelity against the drawing, dead-end corridors turned into decoration, one template per (entry, exit) pair, validation with the game's physics. Use when someone attaches a map drawing, wants to know why a map is rejected or does not fit the game, or wants the preview of what the validator saw. The harness converts; it never draws.
+description: "Turn an attached drawing of a course (PNG) into Zerun templates with proof, using the runners-map import: fidelity against the drawing, dead-end corridors turned into decoration, one template per (entry, exit) pair, validation with the game's physics. Use when someone attaches a map drawing, wants to know why a map is rejected or does not fit the game, or wants the preview of what the validator saw. The harness converts; it never draws."
 license: MIT
 compatibility: Node 20 or newer. No dependency.
 ---

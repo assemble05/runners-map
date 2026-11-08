@@ -1,6 +1,6 @@
 ---
 name: image-compare
-description: Prove that a converted map matches its drawing, pixel by pixel, with runners-map's compare: the fidelity share, the count and bounding box of the pixels that differ, and a diff picture. Use when someone asks whether the map is identical to the image, how much was lost, where, or which tile size keeps more.
+description: "Prove that a converted map matches its drawing, pixel by pixel, with runners-map's compare: the fidelity share, the count and bounding box of the pixels that differ, and a diff picture. Use when someone asks whether the map is identical to the image, how much was lost, where, or which tile size keeps more."
 license: MIT
 compatibility: Node 20 or newer. No dependency.
 ---
