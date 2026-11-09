@@ -43,6 +43,25 @@ export function spawnOf(graph) {
   return entry ? { col: entry.x0, row: entry.floorRow - 1 } : null;
 }
 
+/** The surfaces the runner reaches from one surface by the moves it makes: jumps and drops one way, wall climbs both ways. */
+export function reachedFrom(graph, startId) {
+  const out = graph.surfaces.map(() => []);
+  for (const edge of graph.edges) {
+    out[edge.a].push(edge.b);
+    if (edge.type === "wall") out[edge.b].push(edge.a);
+  }
+  const seen = new Set(startId == null ? [] : [startId]);
+  const queue = startId == null ? [] : [startId];
+  for (let head = 0; head < queue.length; head += 1) {
+    for (const next of out[queue[head]]) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return seen;
+}
+
 export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
   const errors = [];
   const warnings = [];
@@ -71,6 +90,19 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
   if (two < rules.minTwoLaneShare) errors.push({ code: "SINGLE_LANE", message: `only ${pct(two)} of the columns offer two or more surfaces; the minimum is ${pct(rules.minTwoLaneShare)}` });
   if (three < rules.minThreeLaneShare) warnings.push({ code: "FEW_LANES", message: `only ${pct(three)} of the columns offer three or more surfaces; the reference maps have at least ${pct(rules.minThreeLaneShare)}` });
   if (graph.pockets > 0) warnings.push({ code: "POCKETS", message: `${graph.pockets} sealed air region(s) were ignored` });
+  // the parts the runner cannot reach from the spawn, by the moves it makes. For the zerun profile this is an error: a part
+  // the player cannot reach is a part the player cannot pass
+  let unreachable = [];
+  if (rules.laps) {
+    const start = rules.laps.start ?? spawnOf(graph);
+    const from = graph.surfaces.find((s) => s.row === start.row && start.col >= s.x0 && start.col <= s.x1);
+    const reached = reachedFrom(graph, from ? from.id : null);
+    unreachable = graph.surfaces.filter((s) => !reached.has(s.id)).map((s) => ({ row: s.row, x0: s.x0, x1: s.x1 }));
+    if (unreachable.length) {
+      const list = unreachable.slice(0, 6).map((s) => `row ${s.row} cols ${s.x0}-${s.x1}`).join(", ");
+      errors.push({ code: "UNREACHABLE", message: `${unreachable.length} part(s) of the track the runner cannot reach from the spawn: ${list}${unreachable.length > 6 ? ", ..." : ""}` });
+    }
+  }
   // the laps rule (zerun-laps): few enough ways round the track, and every split fits the screen; holes are not judged
   let laps = null;
   if (rules.laps) {
@@ -110,6 +142,7 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
     lanes: { two: round(two), three: round(three) },
     ...(laps ? { laps: { routes: laps.routes, exact: laps.exact, network: laps.network, junctions: laps.junctions, stubs: laps.stubs, splits: laps.splits, start: laps.start } } : {}),
     ...(run ? { run } : {}),
+    ...(rules.laps ? { unreachable } : {}),
   };
   return { ok: errors.length === 0, errors, warnings, report };
 }

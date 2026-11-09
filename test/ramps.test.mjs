@@ -32,8 +32,8 @@ describe("findRamps()", () => {
     assert.deepEqual(ramps.map(({ dir }) => dir), [-1, -1, -1]);
   });
 
-  test("a single step under a high ceiling stays a step; under a 3-tile ceiling it becomes a ramp", () => {
-    assert.deepEqual(findRamps(fromRows(HOP)), []);
+  test("every 1-tile riser is a ramp, under a high ceiling or a low one: the ceiling decides the jumps, not the ramps", () => {
+    assert.deepEqual(findRamps(fromRows(HOP)).map(({ col, row, dir }) => [col, row, dir]), [[5, 5, 1]]);
     assert.deepEqual(findRamps(fromRows(LOW)).map(({ col, row, dir }) => [col, row, dir]), [[5, 3, 1]]);
   });
 });

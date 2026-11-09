@@ -10,6 +10,7 @@
 // solid (thin platforms are passed through). It is an approximation of the arc; the reach numbers are in config.js.
 
 import { isAir, isPassable, isSolid, isStandable } from "../grid/tiles.js";
+import { isRamp } from "../grid/ramps.js";
 import { PHYSICS } from "../config.js";
 
 export const EDGE = Object.freeze({ JUMP: "jump", DROP: "drop", WALL: "wall" });
@@ -117,6 +118,21 @@ function clearRow(tiles, row, fromCol, toCol) {
   return true;
 }
 
+/**
+ * A fall is free: the runner drops and steers in the air, so its path is the straight line from takeoff to landing, not an
+ * L. Clear when every tile on the line is passable (the cells are walked with a DDA, both ends included).
+ */
+export function clearLine(tiles, from, to) {
+  const steps = Math.max(Math.abs(to.col - from.col), Math.abs(to.row - from.row));
+  if (steps === 0) return isPassable(tiles, from.col, from.row);
+  for (let i = 0; i <= steps; i += 1) {
+    const col = Math.round(from.col + ((to.col - from.col) * i) / steps);
+    const row = Math.round(from.row + ((to.row - from.row) * i) / steps);
+    if (!isPassable(tiles, col, row)) return false;
+  }
+  return true;
+}
+
 /** An L-shaped path between two tiles is clear when one of its two corners is free of solid or blocking tiles. */
 export function clearL(tiles, from, to) {
   const viaCorner1 = clearRow(tiles, from.row, from.col, to.col) && clearColumn(tiles, to.col, from.row, to.row);
@@ -178,6 +194,38 @@ function columnIndex(surfaces) {
   };
 }
 
+/**
+ * The air a rise needs above its takeoff: ceil(body + rise) cells, the body measured on the engine (config.js, 09/11).
+ * A rise of one tile that a ramp carries is a walk: the ramp is under the landing, and the surface already has the stand
+ * headroom. Drops and level moves need nothing here.
+ */
+export function riseClears(tiles, physics, from, to) {
+  if (!physics.body) return true;
+  const rise = from.row - to.row;
+  if (rise <= 0) return true;
+  if (rise === 1 && isRamp(tiles, to.col, to.row + 1)) return true;
+  return headroomAt(tiles, from.col, from.row) >= Math.ceil(physics.body + rise);
+}
+
+/** The jumps a runner can make on geometry but cannot make with its body: the rise fails riseClears. */
+export function blockedRises(tiles, graph, physics) {
+  const blocked = [];
+  if (!physics.body) return blocked;
+  const near = columnIndex(graph.surfaces);
+  for (const a of graph.surfaces) {
+    for (const b of [...near(a, physics.maxJumpAcross + 1)]) {
+      if (a.id === b.id) continue;
+      for (const col of takeoffs(a, b)) {
+        const from = { col, row: a.row };
+        const to = { col: landing(b, col), row: b.row };
+        if (!reachable(from, to, physics) || !clearL(tiles, from, to)) continue;
+        if (!riseClears(tiles, physics, from, to)) blocked.push({ from, to, rise: from.row - to.row, needed: Math.ceil(physics.body + from.row - to.row) });
+      }
+    }
+  }
+  return blocked;
+}
+
 /** Jumps and drops. A drop off an end starts one tile past the end, then falls straight down. */
 function jumpEdges(tiles, graph, physics, edges, seen) {
   const { surfaces } = graph;
@@ -190,7 +238,9 @@ function jumpEdges(tiles, graph, physics, edges, seen) {
         const from = { col, row: a.row };
         const to = { col: landing(b, col), row: b.row };
         if (!reachable(from, to, physics)) continue;
-        if (!clearL(tiles, from, to)) continue;
+        // a rise is an arc (up, then across: the L); a fall is free (the straight line)
+        if (!(to.row > from.row && physics.body ? clearLine(tiles, from, to) : clearL(tiles, from, to))) continue;
+        if (!riseClears(tiles, physics, from, to)) continue;
         const type = to.row > from.row ? EDGE.DROP : EDGE.JUMP;
         addEdge(edges, seen, { a: a.id, b: b.id, type, side: sideOf(from.col, to.col), from, to });
       }

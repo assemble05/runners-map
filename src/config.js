@@ -13,12 +13,18 @@
 
 export const ZERUN_HEADROOM = Object.freeze({ stand: 3, slide: 2 });
 
+// body: the runner's standing height in tiles (30 px, Zerun PhysicsUtil.STANDING_HEIGHT_PX). A rise of h tiles needs
+// ceil(body + h) air cells above its takeoff: measured on the engine (09/11), a 1-tile step climbs with 4 air cells
+// and not with 3, a 2-tile ledge with 5 and not with 4. The circuit physics omit it (SpeedRunners maps, see below).
+// maxJumpUp: the highest a runner rises, the double jump (measured on the engine, 09/11: 10.34 tiles; a single held jump
+// reaches 5.84). The rise rule (body) still decides whether the air above the takeoff lets it.
 export const PHYSICS = Object.freeze({
-  maxJumpUp: 6,
+  maxJumpUp: 10,
   maxJumpAcross: 8,
   fullSpeedJumpAcross: 11,
   minWallHeight: 2,
   headroom: ZERUN_HEADROOM,
+  body: 2.5,
 });
 
 export const WORLD = Object.freeze({ rows: 60, tilePx: 12 });
@@ -30,6 +36,16 @@ export const RULES = Object.freeze({
   extremityCols: 3,
   separatorFill: 0.5,
   worldRows: WORLD.rows,
+});
+
+// The two-levels piece (the owner's course piece, its goldens) keeps the physics it was measured with: a single jump of 6,
+// and no body rule. Zerun's physics above is the engine's, measured on 09/11.
+export const LEGACY_PHYSICS = Object.freeze({
+  maxJumpUp: 6,
+  maxJumpAcross: 8,
+  fullSpeedJumpAcross: 11,
+  minWallHeight: 2,
+  headroom: ZERUN_HEADROOM,
 });
 
 export const CIRCUIT_PHYSICS = Object.freeze({
@@ -78,7 +94,7 @@ export const ZERUN_LAPS_RULES = Object.freeze({
 });
 
 export const PROFILES = Object.freeze({
-  "two-levels": { physics: PHYSICS, rules: RULES },
+  "two-levels": { physics: LEGACY_PHYSICS, rules: RULES },
   circuit: { physics: CIRCUIT_PHYSICS, rules: CIRCUIT_RULES },
   "zerun-circuit": { physics: PHYSICS, rules: ZERUN_CIRCUIT_RULES },
   "zerun-laps": { physics: PHYSICS, rules: ZERUN_LAPS_RULES },

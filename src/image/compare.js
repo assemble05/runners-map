@@ -38,7 +38,9 @@ export function compareToSource(cells, tiles, tilePx) {
       } else {
         compared += 1;
         const sourceSolid = cells.cells[i] === CELL.SOLID;
-        const tileSolid = tiles.kinds[row][col] === KIND.SOLID;
+        // a ramp is rock with a slope: it keeps the drawing's solid share, so it is solid here
+        const kind = tiles.kinds[row][col];
+        const tileSolid = kind === KIND.SOLID || kind === KIND.RAMP_RIGHT || kind === KIND.RAMP_LEFT;
         if (sourceSolid === tileSolid) {
           color = sourceSolid ? COLORS.solidMatch : COLORS.airMatch;
         } else {

@@ -24,7 +24,7 @@
       "entryRow": 71,
       "exitRow": 69,
       "fidelity": 0.9833,
-      "ramps": 110,
+      "ramps": 116,
       "stubs": [],
       "profile": "zerun-circuit",
       "ok": false,
@@ -39,7 +39,7 @@
         "LOW_CEILING": 1
       },
       "surfaces": 129,
-      "links": 451,
+      "links": 463,
       "pockets": 0,
       "networkShare": 1,
       "lanes": {

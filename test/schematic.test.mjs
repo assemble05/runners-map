@@ -4,12 +4,13 @@ import { readFileSync } from "node:fs";
 import { analyzeTiles, fromRows } from "../src/index.js";
 import { WORLD, ZERUN_LAPS_RULES } from "../src/config.js";
 import { schematicErrors, schematicRows } from "../src/schematic/rects.js";
+import { applyRamps } from "../src/grid/ramps.js";
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/schematics/${name}.json`, import.meta.url), "utf8"));
 const judge = (schematic, minTiles = ZERUN_LAPS_RULES.runHeight.minTiles) => {
   const rows = schematicRows(schematic);
   const runHeight = { ...ZERUN_LAPS_RULES.runHeight, minTiles, exempt: rows.exempt };
-  return analyzeTiles(fromRows(rows.rows), { profile: "zerun-laps", rules: { runHeight } }).validation;
+  return analyzeTiles(applyRamps(fromRows(rows.rows)).tiles, { profile: "zerun-laps", rules: { runHeight } }).validation;
 };
 const codes = (validation) => validation.errors.map((error) => error.code);
 
@@ -48,17 +49,27 @@ describe("schematicErrors()", () => {
 });
 
 describe("the schematic in the zerun-laps profile", () => {
-  test("a ring of run rooms at the running height is ok", () => {
+  test("a ring whose shafts have no floor is not played: its top band is UNREACHABLE, named by its row", () => {
+    // the shafts are air with no steps: the body cannot climb 16 tiles, so the middle bump of the top band is cut off
     const validation = judge(fixture("anel-simples"));
-    assert.deepEqual(codes(validation), []);
-    assert.equal(validation.ok, true);
+    assert.ok(codes(validation).includes("UNREACHABLE"), JSON.stringify(codes(validation)));
+    assert.match(validation.errors.find((e) => e.code === "UNREACHABLE").message, /row 17/);
   });
 
-  test("a ring with a chord is ok, with three ways round the whole track and two laps through the spawn", () => {
+  test("a ring with a chord is cut off the same way, and the finding names it", () => {
     const validation = judge(fixture("anel-com-corda"));
-    assert.deepEqual(codes(validation), []);
-    assert.equal(validation.report.laps.network.routes, 3);
-    assert.equal(validation.report.laps.routes, 2);
+    assert.ok(codes(validation).includes("UNREACHABLE"), JSON.stringify(codes(validation)));
+  });
+
+  test("a staircase of 1-tile steps climbs: its risers are ramps and nothing is UNREACHABLE", () => {
+    // a flat floor, then ten treads, each 3 wide and one tile higher than the last; the risers between them are ramps
+    const rects = [{ kind: "run", col: 1, row: 20, cols: 21, rows: 15 }];
+    for (let k = 0; k < 10; k += 1) rects.push({ kind: "run", col: 22 + 3 * k, row: 31 - k, cols: 3, rows: 3 });
+    rects.push({ kind: "run", col: 52, row: 21, cols: 10, rows: 3 });
+    const validation = judge({ rects });
+    assert.equal(codes(validation).includes("UNREACHABLE"), false, JSON.stringify(codes(validation)));
+    const rows = schematicRows({ rects }).rows;
+    assert.ok(applyRamps(fromRows(rows)).ramps.length >= 10, "the ten risers are ramps");
   });
 
   test("a run room one tile under the running height is a RUN_HEIGHT finding", () => {

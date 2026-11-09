@@ -10,6 +10,7 @@ import { extname, join, resolve } from "node:path";
 import { analyzeTiles, fromRows } from "../src/index.js";
 import { ZERUN_LAPS_RULES } from "../src/config.js";
 import { schematicRows } from "../src/schematic/rects.js";
+import { applyRamps } from "../src/grid/ramps.js";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -34,7 +35,8 @@ try {
 
 const name = (flag("--name") ?? rows.name).replace(/[^a-z0-9_-]+/gi, "-").toLowerCase();
 const minTiles = flag("--run-height") !== undefined ? Number(flag("--run-height")) : ZERUN_LAPS_RULES.runHeight.minTiles;
-const result = analyzeTiles(fromRows(rows.rows), {
+// every 1-tile riser is a ramp, as in an import: the runner walks the stairs, so the analysis judges the walkable template
+const result = analyzeTiles(applyRamps(fromRows(rows.rows)).tiles, {
   profile: "zerun-laps",
   name,
   rules: { runHeight: { ...ZERUN_LAPS_RULES.runHeight, minTiles, exempt: rows.exempt } },

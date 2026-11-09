@@ -65,6 +65,7 @@ proposal in `src/config.js`, to be confirmed by the owner.
 | `SCREEN` | error | A split whose box is wider than 26 tiles or taller than 15 (the 320 x 180 px screen at 12 px a tile): the runner cannot see both ways at once. | Bring the junctions of the split closer together, or shrink the pocket it goes round. |
 | `START` | error | The spawn point (the floor at the left end of the track) is not on a way round the track: it sits on a dead end, or off the track. | Put the left end of the track on a loop. |
 | `RUN_HEIGHT` | error | A floor tile with less air above it than the running height: 1.5 x the double jump's apex, 10.34 tiles measured on the engine, so 16 tiles. | Make the passage taller: the runner must be able to double jump under the ceiling. |
+| `UNREACHABLE` | error | A part of the track the runner cannot reach from the spawn. A jump or a fall goes one way, a wall both ways; the message names the rows and columns of each part (ADR 0009). | Give the part a way up the body can climb (2.5 + h tiles of air above the take-off), a ramp, or an opening; or redraw it. |
 
 ## How laps are measured (zerun-laps)
 
@@ -102,16 +103,29 @@ a step of h tiles needs an air column of 2.5 + h tiles at the lower standing cel
 under the ceiling), so a 1-tile step needs 4 tiles; the upper cell needs 3 to stand. Found on 09/11, when Zerun's engine
 stopped at such a step of the default map.
 
+## The body's rise (zerun-laps, zerun-circuit)
+
+A rise of h tiles needs ceil(2.5 + h) air cells above its take-off: the body is 30 px (2.5 tiles) and rises under the
+ceiling. Measured on the engine (09/11, a held jump swept): a 1-tile step climbs with 4 air cells, not 3; a 2-tile ledge
+with 5, not 4. The highest rise is the double jump's 10.34 tiles, so 10 whole tiles (`maxJumpUp`). A fall is judged on a
+straight line of passable tiles. The `two-levels` and `circuit` profiles keep the physics they were measured with, without
+this rule, so their goldens do not move (ADR 0009).
+
 ## Ramps (every import)
 
-A diagonal drawn as stacked squares converts to a staircase of 1-tile steps, and Zerun's runner cannot climb a 1-tile
-step under a ceiling of less than 4 tiles (the body is 30 px and must rise 12 px under it). The drawing meant a slope
-(09/11, the owner), so the template the game loads carries ramps: the riser of a step becomes `/` when the floor rises
-to the right (the solid lower-right triangle) and `\` when it rises to the left (the solid lower-left triangle). A riser
-becomes a ramp when it continues a staircase, or when the lower standing cell has less than 4 tiles of air; a lone step
-under a high ceiling stays a step. The air cells do not change, so corridors, gates, routes and fidelity are as before;
-the import reports `ramps` per variant and the routes' `clearance.lowClimbs` does not count a ramped step. The game's
-engine must read `/` and `\` as sloped floors (Zerun issue, part 3).
+A diagonal drawn as stacked squares converts to a staircase of 1-tile steps (09/11, the owner: the drawing meant a
+slope). The template the game loads carries a ramp for every 1-tile riser: `/` when the floor rises to the right (the
+solid lower-right triangle), `\` when it rises to the left (the solid lower-left triangle). The air cells do not change,
+so corridors, gates, routes and fidelity are as before; the import reports `ramps` per variant, and ramps count as solid
+for the fidelity. The game's engine must read `/` and `\` as sloped floors (Zerun issue #38, part 3): until it does, a
+template with ramps is not loaded in the game.
+
+## Opening rock (zerun profiles, opt-in)
+
+Where the body cannot make a rise the drawing has, `--carve` (`importImage` option `carve`) opens the rock above the
+take-off, one row at a time, for as many rows as the rise needs. It never makes a ramp and never touches the riser. Off by
+default: the drawing is the source (ADR 0009). The import reports the cells opened and the fidelity after them, and the
+`UNREACHABLE` findings still name whatever stays cut off.
 
 ## The schematic (zerun-laps)
 

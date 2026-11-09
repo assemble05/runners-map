@@ -10,6 +10,7 @@ import { toCells } from "./image/binarize.js";
 import { compareToSource } from "./image/compare.js";
 import { fromRows, toRows, toTiles } from "./grid/tiles.js";
 import { applyRamps } from "./grid/ramps.js";
+import { carveRises } from "./graph/carve.js";
 import { describeLevels } from "./grid/levels.js";
 import { corridorStats } from "./grid/corridors.js";
 import { findOpenings, listVariants } from "./grid/openings.js";
@@ -130,13 +131,17 @@ export function importImage(bytes, options = {}) {
   const variants = listVariants(tiles, openings, name).map((variant) => {
     const found = findStubs(variant.tiles, { minDepth: minStubDepth });
     const treated = treatStubs(variant.tiles, found, treatment);
-    const result = analyzeTiles(treated.tiles, { ...options, profile, name: variant.name, entryRow: variant.entry?.floorRow, exitRow: variant.exit?.floorRow });
-    // the template the game loads carries ramps where the drawing's diagonals were stairs (grid/ramps.js); the analysis
-    // and the fidelity stay on the tiles as converted, since a ramp is still solid for them and the air does not change
-    const ramped = applyRamps(treated.tiles);
-    result.template = { ...result.template, rows: toRows(ramped.tiles) };
-    result.rampedTiles = ramped.tiles;
-    const fidelity = compareToSource(cells, treated.tiles, tile);
+    // the Zerun profiles walk their rises: every 1-tile riser is a ramp (grid/ramps.js), and where the body cannot make
+    // a rise the drawing has, the rock is opened and each cell reported (graph/carve.js). The analysis judges the tiles
+    // the template holds, and the fidelity measures them against the drawing
+    const zerun = profile.startsWith("zerun");
+    const ramped = zerun ? applyRamps(treated.tiles) : { tiles: treated.tiles, ramps: [] };
+    const { physics } = presetFor({ ...options, profile });
+    // the opening is off unless asked for (--carve): the drawing is the source, and the report names what it leaves unreachable
+    const open = zerun && options.carve === true ? carveRises(ramped.tiles, physics) : { tiles: ramped.tiles, carved: [] };
+    const result = analyzeTiles(open.tiles, { ...options, profile, name: variant.name, entryRow: variant.entry?.floorRow, exitRow: variant.exit?.floorRow });
+    result.rampedTiles = open.tiles;
+    const fidelity = compareToSource(cells, open.tiles, tile);
     const stubs = treated.stubs.map(describeStub);
     const warnings = [...tiles.warnings.map((message) => ({ code: "IMAGE", message })), ...result.validation.warnings];
     if (stubs.some((stub) => stub.treatment === "keep")) {
@@ -149,7 +154,7 @@ export function importImage(bytes, options = {}) {
     }
     result.validation = { ...result.validation, ok: errors.length === 0, errors, warnings };
     result.ok = errors.length === 0;
-    return { name: variant.name, entry: variant.entry, exit: variant.exit, closed: variant.closed, stubs, stubCells: treated.stubs.flatMap((stub) => (stub.treatment === "keep" ? [] : stub.regionCells)), fidelity, ramps: ramped.ramps.length, result };
+    return { name: variant.name, entry: variant.entry, exit: variant.exit, closed: variant.closed, stubs, stubCells: treated.stubs.flatMap((stub) => (stub.treatment === "keep" ? [] : stub.regionCells)), fidelity, ramps: ramped.ramps.length, carved: open.carved, result };
   });
   return {
     name,
