@@ -268,6 +268,29 @@ function sealed(tiles, start, corridor, gates) {
   return seen.size === inside.size;
 }
 
+/**
+ * The clearance along a route: for each cell, the height of the air column through it (floor to ceiling). Zerun's runner
+ * stands in 3 tiles, slides through 2 and cannot pass 1. stand is the share of cells with 3 or more; slide and crushed
+ * count the cells with 2 and with 1; min is the lowest column.
+ */
+function clearanceOf(tiles, cells, cols) {
+  const heightAt = (col, row) => {
+    let top = row;
+    while (isAir(tiles, col, top - 1)) top -= 1;
+    let bottom = row;
+    while (isAir(tiles, col, bottom + 1)) bottom += 1;
+    return bottom - top + 1;
+  };
+  const heights = cells.map((p) => heightAt(p % cols, Math.floor(p / cols)));
+  const stand = heights.filter((h) => h >= 3).length;
+  return {
+    stand: Math.round((stand / heights.length) * 1000) / 1000,
+    slide: heights.filter((h) => h === 2).length,
+    crushed: heights.filter((h) => h <= 1).length,
+    min: Math.min(...heights),
+  };
+}
+
 /** Cells as row runs [row, firstCol, lastCol], in row order. */
 function runsOf(cells, cols) {
   const byRow = new Map();
@@ -315,9 +338,10 @@ function lapLineOf(tiles, start, heading) {
 
 /**
  * The routes of the laps through a spawn point ({ col, row }), up to routeLimit:
- * { spawn, start, exact, lapHeading, lapLine, routes: [{ id, length, junctions, sealed, cells: [[col,row,heading]...],
+ * { spawn, start, exact, lapHeading, lapLine, routes: [{ id, length, junctions, sealed, clearance, cells: [[col,row,heading]...],
  *   corridor: [[row, c0, c1]...], gates: [[col,row]...] }] }, headings as indices into HEADINGS. Routes are ordered by
- * length, then by their cells. Nothing when the spawn is off the track (routes: []).
+ * length, then by their cells; clearance is { stand, slide, crushed, min } along the route (clearanceOf). Nothing when the
+ * spawn is off the track (routes: []).
  */
 export function routesOf(tiles, spawn, { routeLimit = 64 } = {}) {
   const { cols } = tiles;
@@ -382,6 +406,7 @@ export function routesOf(tiles, spawn, { routeLimit = 64 } = {}) {
       length: oriented.length,
       junctions,
       sealed: sealed(tiles, near, corridor, gates),
+      clearance: clearanceOf(tiles, oriented, cols),
       cells: oriented.map((p, k) => [p % cols, Math.floor(p / cols), headings[k]]),
       corridor: runsOf(corridor, cols),
       gates: gates.map((p) => [p % cols, Math.floor(p / cols)]),

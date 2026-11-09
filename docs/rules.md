@@ -94,7 +94,10 @@ than to the rest of the track, as row runs; and its gates, the air cells just ou
 branches for that lap. The lap line is the corridor's cross-section at the start, crossed in the lap heading. A route
 leaves the start to the right when it can, else upward; the routes are ordered by length. `sealed` says whether closing
 the gates keeps the runner inside the corridor; the command exits 1 when a lap is not sealed. The spawn is the circuit's
-own (the air above the floor at the left end of the track).
+own (the air above the floor at the left end of the track). Each route also carries its `clearance`: the air column
+through each of its cells, as the share with 3 tiles or more (the runner stands), the count with 2 (slide only) and the
+count with 1 (crushed: the runner cannot pass). A route with a crushed cell is not runnable; the command names the
+passable routes and the one with the most standing room.
 
 ## The schematic (zerun-laps)
 
