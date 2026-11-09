@@ -34,8 +34,8 @@ export function laneShare(graph, cols, n) {
   return used === 0 ? 0 : stacked / used;
 }
 
-/** The spawn point of a circuit: the floor at the left end of the track (the lowest one if several share that column). */
-function spawnOf(graph) {
+/** The spawn point of a circuit: the air above the floor at the left end of the track (the lowest one if several share that column). */
+export function spawnOf(graph) {
   let entry = null;
   for (const surface of graph.surfaces) {
     if (!entry || surface.x0 < entry.x0 || (surface.x0 === entry.x0 && surface.floorRow > entry.floorRow)) entry = surface;

@@ -84,6 +84,18 @@ code, the first jump held 16 ticks and the second pressed one tick after the rel
 is counted up to the first solid tile; a platform is passed through, so it is not a ceiling. Sixteen tiles is taller than
 the 15-tile screen, so such a passage cannot be seen whole at once. The owner accepted that on 08/11.
 
+## The routes of a lap (zerun-laps)
+
+The circuit is played in place (08/11, the owner, after chained copies of the laps overlapped): the lap changes what is
+open, not where the runner is. `node tools/routes.mjs <template.js> [--out routes.json] [--limit 64]` writes, for each
+way round the track through the spawn, the data the game needs: the route's centreline cells in travel order, each with a
+heading (right, down, left, up: the camera follows the leader's heading); its corridor, every air cell nearer to the route
+than to the rest of the track, as row runs; and its gates, the air cells just outside the corridor, which close the other
+branches for that lap. The lap line is the corridor's cross-section at the start, crossed in the lap heading. A route
+leaves the start to the right when it can, else upward; the routes are ordered by length. `sealed` says whether closing
+the gates keeps the runner inside the corridor; the command exits 1 when a lap is not sealed. The spawn is the circuit's
+own (the air above the floor at the left end of the track).
+
 ## The schematic (zerun-laps)
 
 A track can be drawn as rooms and corridors instead of a sketch (08/11, the owner):

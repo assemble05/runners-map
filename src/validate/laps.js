@@ -15,9 +15,9 @@ import { thin } from "../graph/stubs.js";
 import { isAir } from "../grid/tiles.js";
 
 const STEP_LIMIT = 2_000_000;
-const SIDES = Object.freeze([[1, 0], [-1, 0], [0, 1], [0, -1]]);
+export const SIDES = Object.freeze([[1, 0], [-1, 0], [0, 1], [0, -1]]);
 
-function cellOf(p, cols) {
+export function cellOf(p, cols) {
   return { col: p % cols, row: Math.floor(p / cols) };
 }
 
@@ -53,7 +53,7 @@ function linksOf(line, cols, rows) {
 }
 
 /** The track as a graph: nodes are the junctions and ends (linked cells share a node), corridors run between nodes. */
-function trackOf(tiles) {
+export function trackOf(tiles) {
   const { cols, rows } = tiles;
   const line = centrelineOf(tiles);
   const links = linksOf(line, cols, rows);
@@ -133,11 +133,11 @@ function trackOf(tiles) {
   loops.forEach((cells, k) => {
     for (const p of cells) loopOf[p] = k;
   });
-  return { cols, rows, line, nodeOf, nodes, corridors, loops, corridorOf, loopOf };
+  return { cols, rows, line, links, nodeOf, nodes, corridors, loops, corridorOf, loopOf };
 }
 
 /** Dead ends pruned again and again: a branch that stops is not a way round. Returns the core, with its own indices. */
-function coreOf(track) {
+export function coreOf(track) {
   const { nodes, corridors } = track;
   const count = nodes.length;
   const degree = new Int32Array(count);
@@ -319,7 +319,7 @@ function cyclesThroughEdge(core, edgeId, limit) {
 }
 
 /** The centreline tile nearest to a point, reached through air; -1 when there is none near it. */
-function nearestCentreline(tiles, line, col, row) {
+export function nearestCentreline(tiles, line, col, row) {
   const { cols, rows } = tiles;
   if (col < 0 || row < 0 || col >= cols || row >= rows) return -1;
   const seen = new Uint8Array(cols * rows);
