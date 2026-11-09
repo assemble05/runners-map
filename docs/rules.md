@@ -97,7 +97,21 @@ the gates keeps the runner inside the corridor; the command exits 1 when a lap i
 own (the air above the floor at the left end of the track). Each route also carries its `clearance`: the air column
 through each of its cells, as the share with 3 tiles or more (the runner stands), the count with 2 (slide only) and the
 count with 1 (crushed: the runner cannot pass). A route with a crushed cell is not runnable; the command names the
-passable routes and the one with the most standing room.
+passable routes and the one with the most standing room. `clearance.lowClimbs` lists the steps up the body cannot make:
+a step of h tiles needs an air column of 2.5 + h tiles at the lower standing cell (the body is 30 px and rises h tiles
+under the ceiling), so a 1-tile step needs 4 tiles; the upper cell needs 3 to stand. Found on 09/11, when Zerun's engine
+stopped at such a step of the default map.
+
+## Ramps (every import)
+
+A diagonal drawn as stacked squares converts to a staircase of 1-tile steps, and Zerun's runner cannot climb a 1-tile
+step under a ceiling of less than 4 tiles (the body is 30 px and must rise 12 px under it). The drawing meant a slope
+(09/11, the owner), so the template the game loads carries ramps: the riser of a step becomes `/` when the floor rises
+to the right (the solid lower-right triangle) and `\` when it rises to the left (the solid lower-left triangle). A riser
+becomes a ramp when it continues a staircase, or when the lower standing cell has less than 4 tiles of air; a lone step
+under a high ceiling stays a step. The air cells do not change, so corridors, gates, routes and fidelity are as before;
+the import reports `ramps` per variant and the routes' `clearance.lowClimbs` does not count a ramped step. The game's
+engine must read `/` and `\` as sloped floors (Zerun issue, part 3).
 
 ## The schematic (zerun-laps)
 

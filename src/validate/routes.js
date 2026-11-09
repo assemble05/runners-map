@@ -5,6 +5,7 @@
 // other part of the track, as row runs; and its gates, the air cells just outside the corridor, which close the other
 // branches for this lap. The lap line is the corridor's cross-section at the start, crossed in the lap heading.
 
+import { isRamp } from "../grid/ramps.js";
 import { isAir } from "../grid/tiles.js";
 import { SIDES, cellOf, coreOf, nearestCentreline, trackOf } from "./laps.js";
 
@@ -288,7 +289,46 @@ function clearanceOf(tiles, cells, cols) {
     slide: heights.filter((h) => h === 2).length,
     crushed: heights.filter((h) => h <= 1).length,
     min: Math.min(...heights),
+    lowClimbs: lowClimbsOf(tiles, cells, cols),
   };
+}
+
+/** The standing row under a cell: the lowest air cell of its column run. */
+function standingRowAt(tiles, col, row) {
+  let bottom = row;
+  while (isAir(tiles, col, bottom + 1)) bottom += 1;
+  return bottom;
+}
+
+/**
+ * One-tile steps up along the route that the runner's body cannot make: the body is 30 px (2.5 tiles) and must rise one
+ * tile under the lower cell's ceiling, so the air column at the lower standing cell must be 4 tiles or more, and the upper
+ * cell needs 3 to stand. A step whose riser is a ramp tile is walked, not jumped, so it is not a climb. Longer climbs
+ * (shafts, wall jumps) are the physics graph's matter. Each entry: { at, from: [col,row], to: [col,row], column, need: 4 }.
+ */
+function lowClimbsOf(tiles, cells, cols) {
+  const heightAt = (col, row) => {
+    let top = row;
+    while (isAir(tiles, col, top - 1)) top -= 1;
+    let bottom = row;
+    while (isAir(tiles, col, bottom + 1)) bottom += 1;
+    return bottom - top + 1;
+  };
+  const low = [];
+  const n = cells.length;
+  for (let i = 0; i < n; i += 1) {
+    const c0 = cells[i] % cols;
+    const r0 = Math.floor(cells[i] / cols);
+    const c1 = cells[(i + 1) % n] % cols;
+    const r1 = Math.floor(cells[(i + 1) % n] / cols);
+    const s0 = standingRowAt(tiles, c0, r0);
+    const s1 = standingRowAt(tiles, c1, r1);
+    if (s0 - s1 !== 1) continue;
+    if (isRamp(tiles, c1, s0)) continue;
+    const column = heightAt(c0, s0);
+    if (column < 4 || heightAt(c1, s1) < 3) low.push({ at: i, from: [c0, s0], to: [c1, s1], column, need: 4 });
+  }
+  return low;
 }
 
 /** Cells as row runs [row, firstCol, lastCol], in row order. */

@@ -37,11 +37,12 @@ for (const variant of imported.variants) {
   console.log(`--- ${variant.name}` + (variant.entry ? ` (entry row ${variant.entry.floorRow}, exit row ${variant.exit.floorRow}, closed ${variant.closed.length} other opening(s))` : " (closed circuit: no entry or exit of its own)"));
   for (const stub of variant.stubs) console.log(`stub ${stub.direction} at col ${stub.mouth.col}, row ${stub.mouth.row}: ${stub.depth} tiles deep, ${stub.width} wide, ${stub.cells} tiles of air, ${stub.sealed ? stub.treatment : "unsealed, kept"}`);
   printFindings(variant.result);
+  if (variant.ramps) console.log(`ramps: ${variant.ramps} riser(s) of stairs became ramp tiles ('/' and '\\') in the template`);
   const { result } = variant;
   const analysis = { ...result.validation.report, ok: result.ok, errors: result.validation.errors, warnings: result.validation.warnings, fidelity: variant.fidelity.fidelity, stubs: variant.stubs, entry: variant.entry, exit: variant.exit, closed: variant.closed, source: basename(file), tile: imported.tile };
   writeFileSync(join(out, `${variant.name}.template.js`), toModule(result.template, analysis, basename(file)));
   writeFileSync(join(out, `${variant.name}.report.json`), JSON.stringify(analysis, null, 2));
-  if (result.graph) writeFileSync(join(out, `${variant.name}.preview.png`), renderPreview(result.tiles, result.graph, result.validation, { stubCells: variant.stubCells }));
+  if (result.graph) writeFileSync(join(out, `${variant.name}.preview.png`), renderPreview(result.rampedTiles ?? result.tiles, result.graph, result.validation, { stubCells: variant.stubCells }));
 }
 writeFileSync(join(out, `${name}.import.json`), JSON.stringify(summarizeImport(imported), null, 2));
 writeFileSync(join(out, `${name}.diff.png`), encodePng(imported.fidelity.diff));

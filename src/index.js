@@ -8,7 +8,8 @@
 import { decodePng } from "./image/png.js";
 import { toCells } from "./image/binarize.js";
 import { compareToSource } from "./image/compare.js";
-import { fromRows, toTiles } from "./grid/tiles.js";
+import { fromRows, toRows, toTiles } from "./grid/tiles.js";
+import { applyRamps } from "./grid/ramps.js";
 import { describeLevels } from "./grid/levels.js";
 import { corridorStats } from "./grid/corridors.js";
 import { findOpenings, listVariants } from "./grid/openings.js";
@@ -130,6 +131,11 @@ export function importImage(bytes, options = {}) {
     const found = findStubs(variant.tiles, { minDepth: minStubDepth });
     const treated = treatStubs(variant.tiles, found, treatment);
     const result = analyzeTiles(treated.tiles, { ...options, profile, name: variant.name, entryRow: variant.entry?.floorRow, exitRow: variant.exit?.floorRow });
+    // the template the game loads carries ramps where the drawing's diagonals were stairs (grid/ramps.js); the analysis
+    // and the fidelity stay on the tiles as converted, since a ramp is still solid for them and the air does not change
+    const ramped = applyRamps(treated.tiles);
+    result.template = { ...result.template, rows: toRows(ramped.tiles) };
+    result.rampedTiles = ramped.tiles;
     const fidelity = compareToSource(cells, treated.tiles, tile);
     const stubs = treated.stubs.map(describeStub);
     const warnings = [...tiles.warnings.map((message) => ({ code: "IMAGE", message })), ...result.validation.warnings];
@@ -143,7 +149,7 @@ export function importImage(bytes, options = {}) {
     }
     result.validation = { ...result.validation, ok: errors.length === 0, errors, warnings };
     result.ok = errors.length === 0;
-    return { name: variant.name, entry: variant.entry, exit: variant.exit, closed: variant.closed, stubs, stubCells: treated.stubs.flatMap((stub) => (stub.treatment === "keep" ? [] : stub.regionCells)), fidelity, result };
+    return { name: variant.name, entry: variant.entry, exit: variant.exit, closed: variant.closed, stubs, stubCells: treated.stubs.flatMap((stub) => (stub.treatment === "keep" ? [] : stub.regionCells)), fidelity, ramps: ramped.ramps.length, result };
   });
   return {
     name,

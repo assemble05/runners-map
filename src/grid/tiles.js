@@ -6,10 +6,12 @@
 
 import { CELL } from "../image/binarize.js";
 
-export const KIND = Object.freeze({ EMPTY: "empty", SOLID: "solid", PLATFORM: "platform" });
+// Ramps (grid/ramps.js): '/' is a floor rising to the right (solid lower-right triangle), '\' a floor rising to the left
+// (solid lower-left triangle). For the analysis they are solid and standable; the runner walks over them without a jump.
+export const KIND = Object.freeze({ EMPTY: "empty", SOLID: "solid", PLATFORM: "platform", RAMP_RIGHT: "ramp-right", RAMP_LEFT: "ramp-left" });
 
-export const CHAR_TO_KIND = Object.freeze({ ".": KIND.EMPTY, "#": KIND.SOLID, "=": KIND.PLATFORM });
-export const KIND_TO_CHAR = Object.freeze({ [KIND.EMPTY]: ".", [KIND.SOLID]: "#", [KIND.PLATFORM]: "=" });
+export const CHAR_TO_KIND = Object.freeze({ ".": KIND.EMPTY, "#": KIND.SOLID, "=": KIND.PLATFORM, "/": KIND.RAMP_RIGHT, "\\": KIND.RAMP_LEFT });
+export const KIND_TO_CHAR = Object.freeze({ [KIND.EMPTY]: ".", [KIND.SOLID]: "#", [KIND.PLATFORM]: "=", [KIND.RAMP_RIGHT]: "/", [KIND.RAMP_LEFT]: "\\" });
 
 /** Characters Zerun's TemplateUtil accepts on top of a tile, and the kind of tile they sit on. */
 export const MARK_KINDS = Object.freeze({ W: KIND.EMPTY, B: KIND.EMPTY, c: KIND.EMPTY, P: KIND.EMPTY, s: KIND.EMPTY, N: KIND.EMPTY, K: KIND.EMPTY, t: KIND.EMPTY, "^": KIND.EMPTY, v: KIND.EMPTY, "-": KIND.EMPTY, ">": KIND.SOLID });
@@ -91,12 +93,13 @@ export function setMark(tiles, col, row, mark) {
 }
 
 export function isSolid(tiles, col, row) {
-  return tiles.kinds[row]?.[col] === KIND.SOLID;
+  const kind = tiles.kinds[row]?.[col];
+  return kind === KIND.SOLID || kind === KIND.RAMP_RIGHT || kind === KIND.RAMP_LEFT;
 }
 
 export function isStandable(tiles, col, row) {
   const kind = tiles.kinds[row]?.[col];
-  return kind === KIND.SOLID || kind === KIND.PLATFORM;
+  return kind === KIND.SOLID || kind === KIND.PLATFORM || kind === KIND.RAMP_RIGHT || kind === KIND.RAMP_LEFT;
 }
 
 export function isEmpty(tiles, col, row) {

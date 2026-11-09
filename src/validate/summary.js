@@ -42,6 +42,7 @@ export function summarizeImport(imported) {
       entryRow: variant.result.template.entryRow,
       exitRow: variant.result.template.exitRow,
       fidelity: variant.fidelity.fidelity,
+      ramps: variant.ramps ?? 0,
       stubs: variant.stubs.map((stub) => ({ direction: stub.direction, depth: stub.depth, width: stub.width, cells: stub.cells, sealed: stub.sealed, treatment: stub.treatment, mouth: stub.mouth })),
       ...summarize(variant.result),
     })),

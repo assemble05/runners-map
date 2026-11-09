@@ -55,6 +55,7 @@ const out = {
     "A lap is counted when a runner crosses the lap line in the lap heading; the lap line is the corridor's cross-section at the start.",
     "The route leaves the start to the right when it can, else upward.",
     "clearance is the air column through each route cell: stand is the share with 3 tiles or more (the runner stands), slide counts the cells with 2 (slide only), crushed the cells with 1 (the runner cannot pass). A route with crushed cells is not runnable.",
+    "clearance.lowClimbs lists the steps up the body cannot make: a step of h tiles needs an air column of 2.5 + h tiles at the lower standing cell (4 for a 1-tile step). A route with low climbs is not runnable as drawn.",
   ],
   spawn: { entry: result.spawn, on: result.start },
   count: result.routes.length,
@@ -71,10 +72,12 @@ const gates = result.routes.map((route) => route.gates.length);
 const unsealed = result.routes.filter((route) => !route.sealed).length;
 const passable = result.routes.filter((route) => route.clearance.crushed === 0);
 const best = [...passable].sort((a, b) => b.clearance.stand - a.clearance.stand || a.length - b.length)[0];
+const runnable = passable.filter((route) => route.clearance.lowClimbs.length === 0);
 console.log(`${name}: ${result.routes.length} route(s) through the spawn${result.exact ? "" : " (more than the limit)"}, spawn ${JSON.stringify(result.spawn)} on ${JSON.stringify(result.start)}, lap heading ${out.lapHeading}, lap line ${result.lapLine.length} cell(s)`);
 if (lengths.length) {
   console.log(`  length ${lengths[0]}-${lengths[lengths.length - 1]} cells (median ${lengths[Math.floor(lengths.length / 2)]}); gates ${Math.min(...gates)}-${Math.max(...gates)} per route; ${unsealed} route(s) not sealed by their gates`);
 }
 console.log(`  clearance: ${passable.length} route(s) with no 1-tile cell (passable); best standing share ${best ? `${Math.round(best.clearance.stand * 100)}% on route ${best.id} (${best.length} cells, ${best.clearance.slide} slide cell(s))` : "none"}`);
+console.log(`  climbs: ${runnable.length} passable route(s) with no step up under a low ceiling (a 1-tile step needs a 4-tile column); low climbs per passable route ${passable.length ? `${Math.min(...passable.map((r) => r.clearance.lowClimbs.length))}-${Math.max(...passable.map((r) => r.clearance.lowClimbs.length))}` : "n/a"}`);
 console.log(`  wrote ${target}`);
 process.exitCode = unsealed ? 1 : 0;

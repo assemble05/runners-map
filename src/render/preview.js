@@ -96,7 +96,19 @@ export function renderPreview(tiles, graph, validation, extras = {}) {
   const paint = painter(width, height);
   for (let row = 0; row < tiles.rows; row += 1) {
     for (let col = 0; col < tiles.cols; col += 1) {
-      paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS[tiles.kinds[row][col]]);
+      const kind = tiles.kinds[row][col];
+      if (kind === "ramp-right" || kind === "ramp-left") {
+        // a ramp: the solid lower triangle, rising to the right ('/') or to the left ('\')
+        paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS.empty);
+        for (let j = 0; j < SCALE; j += 1) {
+          for (let i = 0; i < SCALE; i += 1) {
+            const solid = kind === "ramp-right" ? j >= SCALE - 1 - i : j >= i;
+            if (solid) paint.box(col * SCALE + i, row * SCALE + j, 1, 1, COLORS.solid);
+          }
+        }
+        continue;
+      }
+      paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS[kind]);
     }
   }
   for (const [col, row] of extras.stubCells ?? []) paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS.stub);
