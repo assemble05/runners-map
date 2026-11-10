@@ -2,8 +2,8 @@
 //
 // Hard rules are errors: one network, no dead end, no bridge, exactly two ways between the levels and both are
 // the extremity walls, each level crossable on its own, every branch inside its level with a length between
-// 5% and 40% of the level, at least one branch per level. Soft rules are warnings: branches spread out, lengths
-// varied, no climb on a main route.
+// 5% and 40% of the level, at least one branch per level, the piece fits the game's world. Soft rules are
+// warnings: branches spread out, lengths varied, no climb on a main route, enough headroom to stand.
 
 import { bridges, components, degree, lowestRoute } from "../graph/analysis.js";
 import { EDGE } from "../graph/surfaces.js";
@@ -28,6 +28,25 @@ function levelOf(layout, surface) {
 
 function crossLevelEdges(graph, layout) {
   return graph.edges.filter((edge) => levelOf(layout, graph.surfaces[edge.a]) !== levelOf(layout, graph.surfaces[edge.b]));
+}
+
+function pct(ratio) {
+  return `${Math.round(ratio * 1000) / 10}%`;
+}
+
+/** Findings both profiles share: the piece fits the world, the runner can stand. */
+export function checkWorld(tiles, graph, rules, errors, warnings) {
+  if (rules.worldRows && tiles.rows > rules.worldRows) {
+    errors.push({ code: "TOO_TALL", message: `the piece is ${tiles.rows} rows tall; the game's world is ${rules.worldRows} rows (Zerun PhysicsUtil.WORLD_ROWS); use a bigger tile or a shorter drawing` });
+  }
+  const standing = graph.surfaces.reduce((sum, surface) => sum + (surface.x1 - surface.x0 + 1), 0);
+  if (graph.lowCells > 0) {
+    const low = graph.surfaces.filter((surface) => surface.lowCells > 0).map((surface) => surface.id);
+    warnings.push({ code: "LOW_CEILING", message: `${graph.lowCells} of ${standing} standing tiles (${pct(graph.lowCells / standing)}) have room to slide but not to stand`, surfaces: low });
+  }
+  if (graph.crushedCells > 0) {
+    warnings.push({ code: "CRUSHED", message: `${graph.crushedCells} tile(s) over a floor are too low even to slide through and were left out` });
+  }
 }
 
 function checkNetwork(graph, errors) {
@@ -152,14 +171,11 @@ function checkLevel(graph, layout, level, zones, errors, warnings, rules) {
   return { name: level.name, floorRows: level.floorRows, main, branches };
 }
 
-function pct(ratio) {
-  return `${Math.round(ratio * 1000) / 10}%`;
-}
-
-/** Validates a map. `graph` is built with the conservative reach, `fullGraph` with the full-speed reach. */
-export function validate({ layout, graph, fullGraph }, rules = RULES) {
+/** Validates a two-level map. `graph` is built with the conservative reach, `fullGraph` with the full-speed reach. */
+export function validate({ tiles, layout, graph, fullGraph }, rules = RULES) {
   const errors = [];
   const warnings = [];
+  checkWorld(tiles, graph, rules, errors, warnings);
   checkNetwork(graph, errors);
   const zones = checkConnections(fullGraph, layout, errors);
   const conservativeZones = checkConnections(graph, layout, []);
@@ -170,6 +186,8 @@ export function validate({ layout, graph, fullGraph }, rules = RULES) {
     walls: layout.walls,
     surfaces: graph.surfaces.length,
     edges: graph.edges.length,
+    links: graph.links.length,
+    pockets: graph.pockets,
     crossLevel: Object.fromEntries(Object.entries(zones).map(([zone, edges]) => [zone, edges.map((edge) => edge.id)])),
     levels,
   };

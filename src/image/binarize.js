@@ -12,7 +12,7 @@ export function luminance(r, g, b) {
 
 /** Converts an RGBA image into a cell grid: { width, height, cells } with CELL values. */
 export function toCells(image, options = {}) {
-  const { threshold, platformGray, platformMin, platformMax } = { ...DEFAULTS, ...options };
+  const { threshold, platformGray, platformMin, platformMax, whiteIsAir } = { ...DEFAULTS, ...options };
   const { width, height, rgba } = image;
   const cells = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i += 1) {
@@ -20,7 +20,7 @@ export function toCells(image, options = {}) {
     if (rgba[at + 3] < 128) continue;
     const lum = luminance(rgba[at], rgba[at + 1], rgba[at + 2]);
     if (platformGray && lum >= platformMin && lum <= platformMax) cells[i] = CELL.PLATFORM;
-    else if (lum >= threshold) cells[i] = CELL.SOLID;
+    else if ((lum >= threshold) !== Boolean(whiteIsAir)) cells[i] = CELL.SOLID;
   }
   return { width, height, cells };
 }

@@ -1,5 +1,6 @@
 // node tools/convert.mjs <map.png|rows.txt> [--out records] [--name map] [--profile two-levels|circuit]
-//   [--tile 12] [--split-row N] [--platform-gray] [--difficulty 0.3] [--weight 1] [--entry-row N] [--exit-row N] [--no-fail]
+//   [--tile 12] [--split-row N] [--platform-gray] [--white-is-air] [--difficulty 0.3] [--weight 1] [--entry-row N] [--exit-row N] [--no-fail]
+// --white-is-air reads a corridor drawing: white is the open path, black is rock (the reference labyrinth).
 // Writes <out>/<name>.template.js, <name>.report.json and <name>.preview.png. Exit code 1 when the map is invalid.
 
 import { mkdirSync, writeFileSync } from "node:fs";

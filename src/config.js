@@ -1,20 +1,33 @@
-// Every number the converter and the validator use, in one place, grouped by profile (ADR 0007).
+// Every number the converter and the validator use, in one place, grouped by profile (ADR 0007, ADR 0008).
 //
-// two-levels: the owner's course piece for Zerun (ADR 0003, ADR 0005). Physics numbers come from Zerun's ADR 0004
-// and GLOSSARY ("about 6 tiles up, 11 tiles across at full speed"). The reach used to prove a route exists is
-// conservative (8 across); the reach used to catch a leak between levels is the full-speed one (11).
+// Zerun's numbers come from its ADR 0004 and PhysicsUtil: 12 px tiles, a world 60 rows tall, a runner box
+// 14 x 30 px standing and 15 px sliding, so 3 tiles of air to stand, 2 to slide, 1 is impassable; "about 6
+// tiles up, 11 tiles across at full speed". The reach used to prove a route exists is conservative (8 across);
+// the reach used to catch a leak between levels is the full-speed one (11).
 //
 // circuit: a race track like SpeedRunners', one closed loop with parallel lanes. Reach and thresholds were
 // calibrated on the 41 current SpeedRunners maps (scripts/measure-maps.mjs): at 12 up and 24 across every
 // reference map keeps at least 91% of its surfaces in one network, offers two or more surfaces in at least 87%
-// of its columns, and has at most 2 dead ends and 4 bridges.
+// of its columns, and has at most 2 dead ends and 4 bridges. The runner's height in tiles is unknown there, so
+// headroom 1/1 turns that rule off and keeps the goldens honest.
 
+export const ZERUN_HEADROOM = Object.freeze({ stand: 3, slide: 2 });
+
+// body: the runner's standing height in tiles (30 px, Zerun PhysicsUtil.STANDING_HEIGHT_PX). A rise of h tiles needs
+// ceil(body + h) air cells above its takeoff: measured on the engine (09/11), a 1-tile step climbs with 4 air cells
+// and not with 3, a 2-tile ledge with 5 and not with 4. The circuit physics omit it (SpeedRunners maps, see below).
+// maxJumpUp: the highest a runner rises, the double jump (measured on the engine, 09/11: 10.34 tiles; a single held jump
+// reaches 5.84). The rise rule (body) still decides whether the air above the takeoff lets it.
 export const PHYSICS = Object.freeze({
-  maxJumpUp: 6,
+  maxJumpUp: 10,
   maxJumpAcross: 8,
   fullSpeedJumpAcross: 11,
   minWallHeight: 2,
+  headroom: ZERUN_HEADROOM,
+  body: 2.5,
 });
+
+export const WORLD = Object.freeze({ rows: 60, tilePx: 12 });
 
 export const RULES = Object.freeze({
   minBranchRatio: 0.05,
@@ -22,6 +35,17 @@ export const RULES = Object.freeze({
   minBranchesPerLevel: 1,
   extremityCols: 3,
   separatorFill: 0.5,
+  worldRows: WORLD.rows,
+});
+
+// The two-levels piece (the owner's course piece, its goldens) keeps the physics it was measured with: a single jump of 6,
+// and no body rule. Zerun's physics above is the engine's, measured on 09/11.
+export const LEGACY_PHYSICS = Object.freeze({
+  maxJumpUp: 6,
+  maxJumpAcross: 8,
+  fullSpeedJumpAcross: 11,
+  minWallHeight: 2,
+  headroom: ZERUN_HEADROOM,
 });
 
 export const CIRCUIT_PHYSICS = Object.freeze({
@@ -29,23 +53,65 @@ export const CIRCUIT_PHYSICS = Object.freeze({
   maxJumpAcross: 24,
   fullSpeedJumpAcross: 24,
   minWallHeight: 2,
+  headroom: Object.freeze({ stand: 1, slide: 1 }),
 });
 
 export const CIRCUIT_RULES = Object.freeze({
   minNetworkShare: 0.9,
   minTwoLaneShare: 0.8,
   minThreeLaneShare: 0.3,
+  worldRows: null,
+});
+
+export const ZERUN_CIRCUIT_RULES = Object.freeze({ ...CIRCUIT_RULES, worldRows: WORLD.rows });
+
+// The screen the runner sees at once: Zerun draws the run on 320 x 180 px (ADR 0003), so 26 x 15 tiles of 12 px.
+export const SCREEN = Object.freeze({ widthPx: 320, heightPx: 180 });
+
+// The running height (decided 08/11 by the owner): a part that is run through needs 1.5 x the double jump's apex as air
+// above it. The apex is measured on Zerun's engine (RunnerReducer, 60 ticks a second, 12 px tiles): the best double jump,
+// the first jump held 16 ticks and the second pressed one tick after the release, reaches 10.34 tiles. A comment in
+// FixedCourseGeneratorService says 7.8; the current code does not give that number.
+export const DOUBLE_JUMP_APEX_TILES = 10.34;
+export const RUN_CLEARANCE_FACTOR = 1.5;
+
+// zerun-laps (decided 08/11 by the owner): a closed circuit played lap after lap. Holes are not judged, and lanes are
+// not either: what is judged is how many ways round there are (ROUTES) and whether each split fits the screen (SCREEN).
+// maxRoutes is a proposal of this file, to be confirmed by the owner; it is far under the 200 that is too many.
+export const ZERUN_LAPS_RULES = Object.freeze({
+  ...ZERUN_CIRCUIT_RULES,
+  minTwoLaneShare: 0,
+  runHeight: Object.freeze({
+    apexTiles: DOUBLE_JUMP_APEX_TILES,
+    factor: RUN_CLEARANCE_FACTOR,
+    minTiles: Math.ceil(RUN_CLEARANCE_FACTOR * DOUBLE_JUMP_APEX_TILES),
+  }),
+  laps: Object.freeze({
+    maxRoutes: 64,
+    screenCols: Math.floor(SCREEN.widthPx / WORLD.tilePx),
+    screenRows: Math.floor(SCREEN.heightPx / WORLD.tilePx),
+  }),
 });
 
 export const PROFILES = Object.freeze({
-  "two-levels": { physics: PHYSICS, rules: RULES },
+  "two-levels": { physics: LEGACY_PHYSICS, rules: RULES },
   circuit: { physics: CIRCUIT_PHYSICS, rules: CIRCUIT_RULES },
+  "zerun-circuit": { physics: PHYSICS, rules: ZERUN_CIRCUIT_RULES },
+  "zerun-laps": { physics: PHYSICS, rules: ZERUN_LAPS_RULES },
 });
 
 export const IMAGE = Object.freeze({
   tile: 12,
   coverage: 0.5,
   threshold: 128,
+});
+
+export const IMPORT = Object.freeze({
+  profile: "zerun-circuit",
+  minFidelity: 0.97,
+  deadEnds: "barrier",
+  minStubDepth: 3,
+  tileCandidates: Object.freeze([4, 6, 8, 10, 12, 14, 16, 20, 24, 32]),
 });
 
 export const TEMPLATE = Object.freeze({

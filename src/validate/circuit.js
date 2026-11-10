@@ -1,12 +1,16 @@
-// The rules of the circuit profile: a race track that is one network with parallel lanes (ADR 0007).
+// The rules of the circuit profiles: a race track that is one network with parallel lanes (ADR 0007).
 //
 // Errors: no surface at all; the main network holds less than minNetworkShare of the surfaces; fewer than
-// minTwoLaneShare of the columns offer a choice of two surfaces. Warnings: surfaces outside the main network,
-// dead ends, bridges, few three-lane columns, sealed air regions ignored. The reference maps pass the errors
-// and carry some of the warnings, so a warning is information, not a verdict.
+// minTwoLaneShare of the columns offer a choice of two surfaces; the piece does not fit the game's world.
+// Warnings: surfaces outside the main network, dead ends, bridges, few three-lane columns, sealed air regions
+// ignored, low ceilings. The reference maps pass the errors and carry some of the warnings, so a warning is
+// information, not a verdict.
 
 import { bridges, components, degree } from "../graph/analysis.js";
+import { checkWorld } from "./rules.js";
 import { CIRCUIT_RULES } from "../config.js";
+import { lapsOf } from "./laps.js";
+import { runHeightOf } from "./run.js";
 
 function pct(ratio) {
   return `${Math.round(ratio * 1000) / 10}%`;
@@ -30,6 +34,34 @@ export function laneShare(graph, cols, n) {
   return used === 0 ? 0 : stacked / used;
 }
 
+/** The spawn point of a circuit: the air above the floor at the left end of the track (the lowest one if several share that column). */
+export function spawnOf(graph) {
+  let entry = null;
+  for (const surface of graph.surfaces) {
+    if (!entry || surface.x0 < entry.x0 || (surface.x0 === entry.x0 && surface.floorRow > entry.floorRow)) entry = surface;
+  }
+  return entry ? { col: entry.x0, row: entry.floorRow - 1 } : null;
+}
+
+/** The surfaces the runner reaches from one surface by the moves it makes: jumps and drops one way, wall climbs both ways. */
+export function reachedFrom(graph, startId) {
+  const out = graph.surfaces.map(() => []);
+  for (const edge of graph.edges) {
+    out[edge.a].push(edge.b);
+    if (edge.type === "wall") out[edge.b].push(edge.a);
+  }
+  const seen = new Set(startId == null ? [] : [startId]);
+  const queue = startId == null ? [] : [startId];
+  for (let head = 0; head < queue.length; head += 1) {
+    for (const next of out[queue[head]]) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return seen;
+}
+
 export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
   const errors = [];
   const warnings = [];
@@ -37,6 +69,7 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
     errors.push({ code: "NO_SURFACES", message: "no tile to stand on: nothing is white over black, or the tile size is wrong" });
     return { ok: false, errors, warnings, report: { profile: "circuit", surfaces: 0, edges: 0, links: 0, pockets: graph.pockets, networkShare: 0, network: [], deadEnds: [], bridges: [], lanes: { two: 0, three: 0 } } };
   }
+  checkWorld(tiles, graph, rules, errors, warnings);
   const parts = components(graph);
   const sizes = new Map();
   for (const [, part] of parts.of) sizes.set(part, (sizes.get(part) ?? 0) + 1);
@@ -57,8 +90,47 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
   if (two < rules.minTwoLaneShare) errors.push({ code: "SINGLE_LANE", message: `only ${pct(two)} of the columns offer two or more surfaces; the minimum is ${pct(rules.minTwoLaneShare)}` });
   if (three < rules.minThreeLaneShare) warnings.push({ code: "FEW_LANES", message: `only ${pct(three)} of the columns offer three or more surfaces; the reference maps have at least ${pct(rules.minThreeLaneShare)}` });
   if (graph.pockets > 0) warnings.push({ code: "POCKETS", message: `${graph.pockets} sealed air region(s) were ignored` });
+  // the parts the runner cannot reach from the spawn, by the moves it makes. For the zerun profile this is an error: a part
+  // the player cannot reach is a part the player cannot pass
+  let unreachable = [];
+  if (rules.laps) {
+    const start = rules.laps.start ?? spawnOf(graph);
+    const from = graph.surfaces.find((s) => s.row === start.row && start.col >= s.x0 && start.col <= s.x1);
+    const reached = reachedFrom(graph, from ? from.id : null);
+    unreachable = graph.surfaces.filter((s) => !reached.has(s.id)).map((s) => ({ row: s.row, x0: s.x0, x1: s.x1 }));
+    if (unreachable.length) {
+      const list = unreachable.slice(0, 6).map((s) => `row ${s.row} cols ${s.x0}-${s.x1}`).join(", ");
+      errors.push({ code: "UNREACHABLE", message: `${unreachable.length} part(s) of the track the runner cannot reach from the spawn: ${list}${unreachable.length > 6 ? ", ..." : ""}` });
+    }
+  }
+  // the laps rule (zerun-laps): few enough ways round the track, and every split fits the screen; holes are not judged
+  let laps = null;
+  if (rules.laps) {
+    const { maxRoutes, screenCols, screenRows } = rules.laps;
+    const start = rules.laps.start ?? spawnOf(graph);
+    laps = lapsOf(tiles, { routeLimit: maxRoutes, screen: { cols: screenCols, rows: screenRows }, start });
+    if (laps.start?.offTrack) errors.push({ code: "START", message: `the spawn point (col ${start.col}, row ${start.row}) is not on a way round the track` });
+    if (laps.routes > maxRoutes) {
+      errors.push({ code: "ROUTES", message: `the spawn point lies on ${laps.exact ? laps.routes : `more than ${maxRoutes}`} ways round the track; the game alternates between at most ${maxRoutes}` });
+    }
+    for (const split of laps.splits) {
+      if (!split.fits) {
+        const [c0, r0, c1, r1] = split.box;
+        errors.push({ code: "SCREEN", message: `the way splits at cols ${c0}-${c1}, rows ${r0}-${r1} (${split.cols}x${split.rows} tiles); the screen shows ${screenCols}x${screenRows}, so the runner cannot see both ways at once` });
+      }
+    }
+  }
+  // the running height (zerun-laps): the air above every floor tile reaches 1.5 x the double jump's apex
+  let run = null;
+  if (rules.runHeight) {
+    const { minTiles, factor, apexTiles } = rules.runHeight;
+    run = runHeightOf(tiles, minTiles, rules.runHeight.exempt ?? null);
+    if (run.low > 0) {
+      errors.push({ code: "RUN_HEIGHT", message: `${run.low} of ${run.floors} floor tiles (${Math.round(run.share * 1000) / 10}%) have less than ${minTiles} tiles of air above them; a part run through needs ${factor} x the ${apexTiles}-tile double jump` });
+    }
+  }
   const report = {
-    profile: "circuit",
+    profile: rules.laps ? "zerun-laps" : "circuit",
     surfaces: graph.surfaces.length,
     edges: graph.edges.length,
     links: graph.links.length,
@@ -68,6 +140,9 @@ export function validateCircuit({ tiles, graph }, rules = CIRCUIT_RULES) {
     deadEnds,
     bridges: bridgeEdges,
     lanes: { two: round(two), three: round(three) },
+    ...(laps ? { laps: { routes: laps.routes, exact: laps.exact, network: laps.network, junctions: laps.junctions, stubs: laps.stubs, splits: laps.splits, start: laps.start } } : {}),
+    ...(run ? { run } : {}),
+    ...(rules.laps ? { unreachable } : {}),
   };
   return { ok: errors.length === 0, errors, warnings, report };
 }
