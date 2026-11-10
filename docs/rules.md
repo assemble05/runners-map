@@ -120,27 +120,36 @@ so corridors, gates, routes and fidelity are as before; the import reports `ramp
 for the fidelity. The game's engine must read `/` and `\` as sloped floors (Zerun issue #38, part 3): until it does, a
 template with ramps is not loaded in the game.
 
-## Opening rock (zerun profiles, opt-in)
+## Opening rock (zerun profiles, on by default)
 
-Where the body cannot make a rise the drawing has, `--carve` (`importImage` option `carve`) opens the rock above the
-take-off, one row at a time, for as many rows as the rise needs. It never makes a ramp and never touches the riser. Off by
-default: the drawing is the source (ADR 0009). The import reports the cells opened and the fidelity after them, and the
-`UNREACHABLE` findings still name whatever stays cut off.
+Where the body cannot make a rise the drawing has, the rock above the take-off is opened, one row at a time, for as many
+rows as the rise needs. It never makes a ramp and never touches the riser. On by default (09/11, the owner); `--no-carve`
+(`importImage` option `carve: false`) keeps the drawing exactly as drawn. The import reports the cells opened and the
+fidelity after them, and the `UNREACHABLE` findings still name whatever stays cut off (ADR 0009).
 
 ## The schematic (zerun-laps)
 
 A track can be drawn as rooms and corridors instead of a sketch (08/11, the owner):
 `node tools/schematic.mjs <schematic.json> [--out dir] [--run-height N]`. The file lists rectangles of air,
-`{ "kind": "run" | "slide", "col", "row", "cols", "rows" }`, with columns and rows from 1 (column 0 and row 0 are rock)
-and the last world row kept as rock. The air is the union of the rectangles; the rest is rock. A `run` rectangle is a
-part the runner runs through, and the floors under it must have the running height above them. A `slide` rectangle is a
-low tunnel: it must be at least 2 tiles tall, and the floors under it are exempt from the running height. The command
-writes `<name>.template.js` and `<name>.report.json`, and it runs the same findings as the drawing.
+`{ "kind": "run" | "slide" | "climb", "col", "row", "cols", "rows" }`, with columns and rows from 1 (column 0 and row 0
+are rock) and the last world row kept as rock. The air is the union of the rectangles; the rest is rock. The kind says
+what the runner does there, and that is what decides the running height (ADR 0009):
+
+- `run`: a part the runner runs through. Its floors must have the running height above them.
+- `slide`: a low tunnel the runner slides through. At least 2 tiles tall; its floors are exempt from the running height.
+- `climb`: a shaft the runner climbs, by its ledges or its ramps. At least 4 tiles tall (the air a 1-tile step needs over
+  its take-off); its floors are exempt from the running height. Without this kind no closed lap can be built: a climb must
+  reach the next floor within the 10 tiles of the double jump, and the running height asks for 16 tiles of air above a
+  floor, so any climb over a run would be refused.
+
+A floor is exempt only when every air cell above it belongs to a slide or a climb and to no run. The command writes
+`<name>.template.js` and `<name>.report.json`, and it runs the same findings as the drawing.
 
 | Code | Severity | Meaning | Fix |
 | --- | --- | --- | --- |
 | `SCHEMATIC` | error | The file is not a schematic: no rectangle list, an unknown kind, a value that is not an integer, or a rectangle outside the world. Nothing is generated. | Fix the rectangle the message names. |
 | `SLIDE_LOW` | error | A slide tunnel is shorter than the 2 tiles the runner needs to slide through. | Make the tunnel 2 tiles tall or more, or make it a run rectangle. |
+| `CLIMB_LOW` | error | A climb shaft is shorter than the 4 tiles of air a 1-tile step needs over its take-off, so nothing in it can be climbed. | Make the shaft 4 tiles tall or more, or make it a run rectangle. |
 
 ## How a branch is measured (two-levels)
 

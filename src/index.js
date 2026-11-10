@@ -137,8 +137,9 @@ export function importImage(bytes, options = {}) {
     const zerun = profile.startsWith("zerun");
     const ramped = zerun ? applyRamps(treated.tiles) : { tiles: treated.tiles, ramps: [] };
     const { physics } = presetFor({ ...options, profile });
-    // the opening is off unless asked for (--carve): the drawing is the source, and the report names what it leaves unreachable
-    const open = zerun && options.carve === true ? carveRises(ramped.tiles, physics) : { tiles: ramped.tiles, carved: [] };
+    // the opening is on by default (09/11, the owner): where the body cannot climb a rise the drawing has, the rock is
+    // opened and every cell is reported with the fidelity it costs. `carve: false` (--no-carve) keeps the drawing as drawn.
+    const open = zerun && options.carve !== false ? carveRises(ramped.tiles, physics) : { tiles: ramped.tiles, carved: [] };
     const result = analyzeTiles(open.tiles, { ...options, profile, name: variant.name, entryRow: variant.entry?.floorRow, exitRow: variant.exit?.floorRow });
     result.rampedTiles = open.tiles;
     const fidelity = compareToSource(cells, open.tiles, tile);

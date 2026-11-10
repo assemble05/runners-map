@@ -1,18 +1,22 @@
 // The schematic (decided 08/11 by the owner): a track drawn as rooms and corridors instead of a sketch. A rectangle is air.
-// `run` is a part the runner runs through; `slide` is a low tunnel the runner slides through. Everything else is rock.
+// `run` is a part the runner runs through; `slide` is a low tunnel the runner slides through; `climb` is a shaft the runner
+// climbs, by its ledges or its ramps (09/11, ADR 0009). Everything else is rock.
 // The map is the union of the rectangles, so a loop is rectangles that overlap. The floor is the rock under the air.
 // The rows use Zerun's characters: '#' rock, '.' air. The world is WORLD.rows tall, with rock on its last row.
 
 import { WORLD, ZERUN_HEADROOM } from "../config.js";
 
-export const RECT_KINDS = Object.freeze(["run", "slide"]);
+export const RECT_KINDS = Object.freeze(["run", "slide", "climb"]);
+// a climb shaft is at least this tall: the air a 1-tile step needs over its take-off (ceil(body + 1), ADR 0009)
+export const CLIMB_MIN_ROWS = 4;
 const ROCK = "#";
 const AIR = ".";
 const MAX_COLS = 200;
 
 /**
  * The problems of a schematic as { code, message }. SCHEMATIC: the input cannot be read as a schematic. SLIDE_LOW: a
- * slide tunnel is shorter than the runner's slide, so it cannot be slid through.
+ * slide tunnel is shorter than the runner's slide, so it cannot be slid through. CLIMB_LOW: a climb shaft is shorter
+ * than the air a step needs, so nothing in it can be climbed.
  */
 export function schematicErrors(schematic) {
   const errors = [];
@@ -45,13 +49,17 @@ export function schematicErrors(schematic) {
     if (rect.kind === "slide" && rect.rows < ZERUN_HEADROOM.slide) {
       errors.push({ code: "SLIDE_LOW", message: `${at}: a slide tunnel of ${rect.rows} tiles cannot be slid through; the runner needs ${ZERUN_HEADROOM.slide}` });
     }
+    if (rect.kind === "climb" && rect.rows < CLIMB_MIN_ROWS) {
+      errors.push({ code: "CLIMB_LOW", message: `${at}: a climb shaft of ${rect.rows} tiles has no room to climb; a step needs ${CLIMB_MIN_ROWS} tiles of air over its take-off` });
+    }
   });
   return errors;
 }
 
 /**
- * The rows of a schematic, and the floors that are slid over: { name, rows, width, height, exempt, errors }. `exempt` holds
- * the floor tiles ("col,row" of the rock) whose air above is slide-only air, so the running height does not apply to them.
+ * The rows of a schematic, and the floors the runner does not run along: { name, rows, width, height, exempt, errors }.
+ * `exempt` holds the floor tiles ("col,row" of the rock) whose air above belongs to a slide tunnel or a climb shaft and to
+ * no run room, so the running height does not apply to them: it is the rule for what is run through (ADR 0009).
  */
 export function schematicRows(schematic) {
   const errors = schematicErrors(schematic);
@@ -63,12 +71,12 @@ export function schematicRows(schematic) {
   const grid = Array.from({ length: height }, () => new Array(width).fill(ROCK));
   const key = (col, row) => `${col},${row}`;
   const run = new Set();
-  const slide = new Set();
+  const passed = new Set(); // slid through or climbed: air the runner does not run along
   for (const rect of rects) {
     for (let row = rect.row; row < rect.row + rect.rows; row += 1) {
       for (let col = rect.col; col < rect.col + rect.cols; col += 1) {
         grid[row][col] = AIR;
-        (rect.kind === "run" ? run : slide).add(key(col, row));
+        (rect.kind === "run" ? run : passed).add(key(col, row));
       }
     }
   }
@@ -77,7 +85,7 @@ export function schematicRows(schematic) {
     for (let col = 0; col < width; col += 1) {
       const floor = grid[row][col] === ROCK && grid[row - 1][col] === AIR;
       const above = key(col, row - 1);
-      if (floor && slide.has(above) && !run.has(above)) exempt.add(key(col, row));
+      if (floor && passed.has(above) && !run.has(above)) exempt.add(key(col, row));
     }
   }
   return {

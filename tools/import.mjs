@@ -1,7 +1,8 @@
 // node tools/import.mjs <drawing.png> [--out records] [--name map] [--tile 8] [--white-is-air]
 //   [--profile zerun-circuit|two-levels|circuit] [--dead-ends barrier|fill|keep] [--min-fidelity 0.97]
-//   [--min-stub-depth 3] [--platform-gray] [--split-row N] [--carve] [--no-fail]
-// --carve: for the Zerun profiles, open the rock above a take-off the body cannot climb (off by default; reported; ADR 0009).
+//   [--min-stub-depth 3] [--platform-gray] [--split-row N] [--no-carve] [--no-fail]
+// For the Zerun profiles the rock above a take-off the body cannot climb is opened and reported (ADR 0009). --no-carve
+// keeps the drawing exactly as drawn.
 // The whole road from an attached drawing to game templates (ADR 0008). For every variant it writes
 // <out>/<variant>.template.js, .report.json and .preview.png; for the drawing, <out>/<name>.import.json and
 // <name>.diff.png. Exit code 1 when any variant is invalid or the fidelity is under the minimum.
@@ -29,7 +30,7 @@ const imported = importImage(readFileSync(file), {
   deadEnds: options.deadEnds,
   minFidelity: options.minFidelity,
   minStubDepth: options.minStubDepth,
-  carve: options.carve === true,
+  carve: options.noCarve !== true,
   separatorRow: options.splitRow,
 });
 mkdirSync(out, { recursive: true });

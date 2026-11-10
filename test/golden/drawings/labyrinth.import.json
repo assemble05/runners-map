@@ -23,7 +23,7 @@
       "name": "labyrinth",
       "entryRow": 71,
       "exitRow": 69,
-      "fidelity": 0.9833,
+      "fidelity": 0.9754,
       "ramps": 116,
       "stubs": [],
       "profile": "zerun-circuit",
@@ -35,16 +35,18 @@
       },
       "warnings": {
         "BRIDGE": 1,
+        "CRUSHED": 1,
         "DEAD_END": 1,
-        "LOW_CEILING": 1
+        "LOW_CEILING": 1,
+        "POCKETS": 1
       },
-      "surfaces": 129,
-      "links": 463,
-      "pockets": 0,
+      "surfaces": 134,
+      "links": 503,
+      "pockets": 7,
       "networkShare": 1,
       "lanes": {
         "two": 0.918,
-        "three": 0.7418
+        "three": 0.7377
       }
     }
   ]

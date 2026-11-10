@@ -43,8 +43,9 @@ describe("importImage() on the labyrinth drawing", () => {
   });
 
   test("the fidelity is the same before and after a barrier treatment, and lower after a fill", () => {
-    const barrier = importImage(labyrinth, { name: "labyrinth", tile: 8, whiteIsAir: true });
-    const fill = importImage(labyrinth, { name: "labyrinth", tile: 8, whiteIsAir: true, deadEnds: "fill" });
+    // carve: false, so what is measured is the dead-end treatment alone; opening the rock moves the fidelity too (ADR 0009)
+    const barrier = importImage(labyrinth, { name: "labyrinth", tile: 8, whiteIsAir: true, carve: false });
+    const fill = importImage(labyrinth, { name: "labyrinth", tile: 8, whiteIsAir: true, deadEnds: "fill", carve: false });
     assert.equal(barrier.variants[0].fidelity.fidelity, barrier.fidelity.fidelity);
     if (barrier.variants[0].stubs.some((stub) => stub.sealed)) assert.ok(fill.variants[0].fidelity.fidelity < fill.fidelity.fidelity);
   });

@@ -34,11 +34,27 @@ describe("schematicRows()", () => {
     assert.ok(exempt.has("10,33"));
     assert.ok(!exempt.has("2,26"));
   });
+
+  test("the floor of a climb shaft is exempt too: a shaft is climbed, not run along", () => {
+    const { exempt } = schematicRows({
+      rects: [
+        { kind: "run", col: 1, row: 10, cols: 6, rows: 16 },
+        { kind: "climb", col: 10, row: 10, cols: 8, rows: 30 },
+      ],
+    });
+    assert.ok(exempt.has("10,40"), "the climb shaft's own floor");
+    assert.ok(!exempt.has("2,26"), "the run room's floor is not exempt");
+  });
 });
 
 describe("schematicErrors()", () => {
   test("a slide tunnel shorter than the slide is SLIDE_LOW", () => {
     assert.deepEqual(schematicErrors({ rects: [{ kind: "slide", col: 2, row: 3, cols: 4, rows: 1 }] }).map((error) => error.code), ["SLIDE_LOW"]);
+  });
+
+  test("a climb shaft with no room for a step is CLIMB_LOW", () => {
+    assert.deepEqual(schematicErrors({ rects: [{ kind: "climb", col: 2, row: 3, cols: 4, rows: 3 }] }).map((error) => error.code), ["CLIMB_LOW"]);
+    assert.deepEqual(schematicErrors({ rects: [{ kind: "climb", col: 2, row: 3, cols: 4, rows: 4 }] }).map((error) => error.code), []);
   });
 
   test("an unknown kind, a rectangle that reaches the rock row, or a missing list is SCHEMATIC", () => {
@@ -70,6 +86,42 @@ describe("the schematic in the zerun-laps profile", () => {
     assert.equal(codes(validation).includes("UNREACHABLE"), false, JSON.stringify(codes(validation)));
     const rows = schematicRows({ rects }).rows;
     assert.ok(applyRamps(fromRows(rows)).ramps.length >= 10, "the ten risers are ramps");
+  });
+
+  test("a lap track with a climb shaft of ledges is played: no finding at all", () => {
+    // the shape that satisfies both rules at once: the runner runs the two long corridors, and climbs the shaft between
+    // them. Without the climb kind this is impossible: a climb must reach the next floor within the 10 tiles of the double
+    // jump, while the running height asks for 16 tiles of air above a floor that is run along (ADR 0009).
+    const ceiling = 2, topFloor = 19, bottomFloor = 49, islandW = 20, shaftW = 8, climbW = 10, ledgeW = 4, step = 9;
+    const island0 = 2 + shaftW, island1 = island0 + islandW - 1, climb0 = island1 + 1, climb1 = climb0 + climbW - 1;
+    const rects = [
+      { kind: "run", col: 2, row: ceiling, cols: shaftW, rows: bottomFloor - ceiling },
+      { kind: "run", col: island0, row: ceiling, cols: islandW, rows: topFloor - ceiling },
+      { kind: "run", col: island0, row: topFloor + 13, cols: islandW, rows: bottomFloor - (topFloor + 13) },
+    ];
+    const ledges = [];
+    for (let row = bottomFloor - step; row > topFloor + 1; row -= step) {
+      const left = ledges.length % 2 === 0;
+      ledges.push({ row, left, col0: left ? climb0 : climb1 - ledgeW + 1 });
+    }
+    // the shaft's air, as the pieces between the ledges of each band: every piece is tall enough to climb
+    const band = (col, cols, rows) => {
+      let start = ceiling;
+      for (const row of [...rows].sort((a, b) => a - b)) {
+        if (row > start) rects.push({ kind: "climb", col, row: start, cols, rows: row - start });
+        start = row + 1;
+      }
+      if (bottomFloor > start) rects.push({ kind: "climb", col, row: start, cols, rows: bottomFloor - start });
+    };
+    band(climb0, ledgeW, ledges.filter((l) => l.left).map((l) => l.row));
+    band(climb1 - ledgeW + 1, ledgeW, ledges.filter((l) => !l.left).map((l) => l.row));
+    band(climb0 + ledgeW, climbW - 2 * ledgeW, []);
+
+    assert.deepEqual(schematicErrors({ rects }), []);
+    const validation = judge({ rects });
+    assert.deepEqual(codes(validation), [], JSON.stringify(validation.errors.map((error) => error.message)));
+    assert.equal(validation.report.run.low, 0);
+    assert.equal(ledges.length, 3, "three ledges climb from the bottom run to the top run");
   });
 
   test("a run room one tile under the running height is a RUN_HEIGHT finding", () => {

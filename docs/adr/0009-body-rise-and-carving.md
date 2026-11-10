@@ -24,15 +24,24 @@ Measured on Zerun's engine (09/11, a held jump swept over the start column and t
   `\` are solid for the holes and the fidelity. The engine must read them as sloped floors (Zerun issue #38).
 - **Unreachable parts are errors.** The reach is directed from the spawn: a jump or a fall goes one way, a wall both ways.
   A part of the track that no way reaches is `UNREACHABLE`, named by its rows and columns (`reachedFrom`).
-- **Opening rock is a declared transformation.** Where a rise is cut off, `carveRises` may open the rock above its take-off.
-  It is opt-in (`--carve`), never makes ramps, and reports every cell it opened and the fidelity after it. The default keeps
-  the drawing as drawn: the drawing is the source.
+- **Opening rock is a declared transformation, on by default.** Where a rise is cut off, `carveRises` opens the rock above
+  its take-off. It never makes ramps, and it reports every cell it opened and the fidelity after it. On by default
+  (09/11, the owner); `--no-carve` keeps the drawing exactly as drawn.
+- **A climb is not a run.** The schematic takes a third kind of room, `climb`: a shaft the runner climbs by its ledges or
+  its ramps, at least 4 tiles tall. Its floors are exempt from the running height, as a slide tunnel's are. Without it no
+  closed lap can be built, and the arithmetic says why: a climb must reach the next floor within the 10 tiles of the
+  double jump, while the running height asks for 16 tiles of air above a floor that is run along. 10 is less than 16, so
+  every climb over a run was refused. The rule now says what it meant: the running height is for what the runner runs along.
 
 ## Consequences
 
-- The default map under these rules: 37 unreachable parts; with `--carve`, 34 (343 cells opened; fidelity 96.1% to 90.4%).
+- The default map under these rules: 37 unreachable parts; with the rock opened, 34 (343 cells; fidelity 96.1% to 90.4%).
   Opening rock does not make the drawing passable, so it needs a redraw or a schematic. The harness records the findings
-  without accepting them.
+  without accepting them. A drawing cannot say which part is a climb and which is a run, so a drawn track is judged as all
+  run: that is the cost of a sketch, and the reason the schematic exists.
+- A lap track that passes every rule at once is proven by `test/schematic.test.mjs`: two runs, an island between them, a
+  climb shaft of three ledges nine tiles apart, and a drop shaft. 41 x 60 tiles, 2 laps through the spawn, both splits
+  inside the screen, no floor short of the running height.
 - The default map also has 292 of 299 floor tiles with less than 16 tiles of air above them (RUN_HEIGHT, the owner's rule
   of 08/11). That finding was accepted before; it stays in the record.
 - The example ring (`schematics/zerun/exemplo-anel-com-corda.json`) has two parts cut off at the top (row 17): it is not
