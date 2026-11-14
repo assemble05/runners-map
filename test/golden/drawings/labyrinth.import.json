@@ -1,0 +1,53 @@
+{
+  "profile": "zerun-circuit",
+  "tile": 8,
+  "topology": "circuit",
+  "openings": {
+    "left": 0,
+    "right": 0
+  },
+  "corridors": {
+    "count": 769,
+    "min": 2,
+    "p10": 3,
+    "median": 4,
+    "p90": 9,
+    "max": 46
+  },
+  "fidelity": 0.9833,
+  "minStubDepth": 4,
+  "treatment": "barrier",
+  "ok": false,
+  "variants": [
+    {
+      "name": "labyrinth",
+      "entryRow": 71,
+      "exitRow": 69,
+      "fidelity": 0.9754,
+      "ramps": 116,
+      "stubs": [],
+      "profile": "zerun-circuit",
+      "ok": false,
+      "cols": 256,
+      "rows": 96,
+      "errors": {
+        "TOO_TALL": 1
+      },
+      "warnings": {
+        "BRIDGE": 1,
+        "CRUSHED": 1,
+        "DEAD_END": 1,
+        "LOW_CEILING": 1,
+        "POCKETS": 1
+      },
+      "surfaces": 134,
+      "links": 503,
+      "pockets": 7,
+      "networkShare": 1,
+      "lanes": {
+        "two": 0.918,
+        "three": 0.7377
+      }
+    }
+  ]
+}

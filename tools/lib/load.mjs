@@ -5,13 +5,14 @@ import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { analyzeImage, analyzeRows } from "../../src/index.js";
 
-/** The analysis options every tool accepts: --profile, --tile, --split-row, --platform-gray. */
+/** The analysis options every tool accepts: --profile, --tile, --split-row, --platform-gray, --white-is-air. */
 export function analysisOptions(options) {
   return {
     profile: options.profile,
     tile: options.tile,
     separatorRow: options.splitRow,
     platformGray: options.platformGray === true,
+    whiteIsAir: options.whiteIsAir === true,
   };
 }
 
@@ -46,8 +47,8 @@ export function printFindings(result) {
     console.log("invalid: the layout could not be read");
   } else if (report.levels) {
     const levels = report.levels.map((level) => `${level.name}: main route ${level.main.length} surface(s), ${level.branches.length} branch(es)`).join("; ");
-    console.log(`${verdict} (two-levels): ${report.surfaces} surfaces, ${report.edges} moves; ${levels}`);
+    console.log(`${verdict} (${result.profile}): ${report.surfaces} surfaces, ${report.edges} moves; ${levels}`);
   } else {
-    console.log(`${verdict} (circuit): ${report.surfaces} surfaces, ${report.edges} moves; main network ${pct(report.networkShare)}; columns with 2+ surfaces ${pct(report.lanes.two)}, 3+ ${pct(report.lanes.three)}; ${report.pockets} pocket(s)`);
+    console.log(`${verdict} (${result.profile}): ${report.surfaces} surfaces, ${report.edges} moves; main network ${pct(report.networkShare)}; columns with 2+ surfaces ${pct(report.lanes.two)}, 3+ ${pct(report.lanes.three)}; ${report.pockets} pocket(s)`);
   }
 }

@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 
 export const here = dirname(fileURLToPath(import.meta.url));
 
+/** Zerun's reach with no headroom rule, for tests of graph geometry drawn in a few rows. */
+export const GEOMETRY_PHYSICS = Object.freeze({ maxJumpUp: 6, maxJumpAcross: 8, fullSpeedJumpAcross: 11, minWallHeight: 2, headroom: { stand: 1, slide: 1 } });
+
 export function fixtureRows(name) {
   return readFileSync(join(here, "fixtures", `${name}.rows.txt`), "utf8")
     .split(/\r?\n/)
@@ -14,7 +17,8 @@ export function codes(result) {
   return [...new Set(result.validation.errors.map((finding) => finding.code))].sort();
 }
 
-/** A map of `width` columns: outer walls, a slab with shafts at both ends, one branch platform per level. */
+/** A map of `width` columns: outer walls, a slab with shafts at both ends, one branch platform per level,
+ * each three tiles over its floor so the runner stands under it. */
 export function twoLevelMap(width, { lowerBranch = [10, 18], upperBranch = [20, 28] } = {}) {
   const line = (fill) => `#${fill}#`;
   const empty = ".".repeat(width - 2);
@@ -33,6 +37,7 @@ export function twoLevelMap(width, { lowerBranch = [10, 18], upperBranch = [20, 
     line(empty),
     line(empty),
     line(lowerBranch ? span(lowerBranch[0], lowerBranch[1]) : empty),
+    line(empty),
     line(empty),
     line(empty),
     "#".repeat(width),

@@ -1,14 +1,17 @@
 // A picture of what the validator saw: tiles, surfaces by role (main route or network, branch, problem), moves
-// by type. Green is a main route, blue a branch, red an error, orange a warning, yellow a wall climb, grey a jump
-// or drop.
+// by type, stubs and barriers. Green is a main route, blue a branch, red an error, orange a warning or a stub,
+// yellow a wall climb, grey a jump or drop, magenta a barrier.
 
 import { encodePng } from "../image/png.js";
 import { EDGE } from "../graph/surfaces.js";
+import { markAt } from "../grid/tiles.js";
 
 const COLORS = Object.freeze({
   empty: [20, 17, 32],
   solid: [58, 52, 80],
   platform: [133, 122, 176],
+  stub: [70, 45, 20],
+  barrier: [214, 51, 132],
   main: [76, 175, 80],
   branch: [66, 133, 244],
   problem: [229, 57, 53],
@@ -85,14 +88,33 @@ function edgeColors(validation) {
   return colors;
 }
 
-/** Renders the tiles, the graph and the validation into a PNG byte array. */
-export function renderPreview(tiles, graph, validation) {
+/** Renders the tiles, the graph and the validation into a PNG byte array. `extras.stubCells` tints the air of
+ * treated dead ends. */
+export function renderPreview(tiles, graph, validation, extras = {}) {
   const width = tiles.cols * SCALE;
   const height = tiles.rows * SCALE;
   const paint = painter(width, height);
   for (let row = 0; row < tiles.rows; row += 1) {
     for (let col = 0; col < tiles.cols; col += 1) {
-      paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS[tiles.kinds[row][col]]);
+      const kind = tiles.kinds[row][col];
+      if (kind === "ramp-right" || kind === "ramp-left") {
+        // a ramp: the solid lower triangle, rising to the right ('/') or to the left ('\')
+        paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS.empty);
+        for (let j = 0; j < SCALE; j += 1) {
+          for (let i = 0; i < SCALE; i += 1) {
+            const solid = kind === "ramp-right" ? j >= SCALE - 1 - i : j >= i;
+            if (solid) paint.box(col * SCALE + i, row * SCALE + j, 1, 1, COLORS.solid);
+          }
+        }
+        continue;
+      }
+      paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS[kind]);
+    }
+  }
+  for (const [col, row] of extras.stubCells ?? []) paint.box(col * SCALE, row * SCALE, SCALE, SCALE, COLORS.stub);
+  for (let row = 0; row < tiles.rows; row += 1) {
+    for (let col = 0; col < tiles.cols; col += 1) {
+      if (markAt(tiles, col, row) === "W") paint.box(col * SCALE + 1, row * SCALE + 1, SCALE - 2, SCALE - 2, COLORS.barrier);
     }
   }
   const role = roles(validation);

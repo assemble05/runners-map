@@ -1,0 +1,9 @@
+{
+  "name": "anel-simples",
+  "rects": [
+    { "kind": "run", "col": 4, "row": 2, "cols": 56, "rows": 16 },
+    { "kind": "run", "col": 4, "row": 20, "cols": 56, "rows": 16 },
+    { "kind": "run", "col": 4, "row": 2, "cols": 16, "rows": 34 },
+    { "kind": "run", "col": 44, "row": 2, "cols": 16, "rows": 34 }
+  ]
+}

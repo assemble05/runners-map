@@ -16,15 +16,15 @@ describe("toModule()", () => {
 
   test("the entry and the exit are the floor of the lower level", () => {
     const result = analyzeRows(fixtureRows("two-levels"));
-    assert.equal(result.template.entryRow, 15);
-    assert.equal(result.template.exitRow, 15);
-    assert.equal(result.template.rows[15], "#".repeat(40));
+    assert.equal(result.template.entryRow, 16);
+    assert.equal(result.template.exitRow, 16);
+    assert.equal(result.template.rows[16], "#".repeat(40));
   });
 
   test("the generated module loads back as a template", async () => {
     const mod = await import("./golden/two-levels.template.js");
     assert.equal(mod.template.name, "two-levels");
-    assert.equal(mod.template.rows.length, 16);
+    assert.equal(mod.template.rows.length, 17);
     assert.equal(mod.analysis.ok, true);
   });
 });
