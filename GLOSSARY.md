@@ -39,3 +39,5 @@
 | **finding** | What the validator reports: an error (the map is rejected) or a warning, each with a code in `docs/rules.md`. |
 | **reference maps** | The 79 SpeedRunners collision renders in `test/fixtures/speedrunners/`, with golden rows and findings. |
 | **preview** | The PNG the renderer writes: tiles, surfaces by role, moves by type, treated stubs and barriers. |
+| **certificate / manifest** | A map tool output's `<full-filename>.manifest.json`: closed provenance, relative input/output SHA-256 hashes and the tool's deterministic proof (ADR 0010). |
+| **acceptance** | A human exception recorded in `proof.accepted` with who, reason and date; it does not change the tool's proof or the asset. |

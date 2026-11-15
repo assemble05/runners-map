@@ -8,6 +8,7 @@ import { basename, extname, join } from "node:path";
 import { parseArgs } from "./lib/args.mjs";
 import { analysisOptions, loadAndAnalyze, printFindings } from "./lib/load.mjs";
 import { renderPreview, toModule } from "../src/index.js";
+import { analysisProof, writeManifests } from "./lib/manifest.mjs";
 
 const { positionals, options } = parseArgs(process.argv.slice(2));
 const [file] = positionals;
@@ -32,6 +33,7 @@ if (result.layout.ok) {
   writeFileSync(join(out, `${name}.template.js`), toModule(result.template, analysis, basename(file)));
   writeFileSync(join(out, `${name}.report.json`), JSON.stringify(analysis, null, 2));
   writeFileSync(join(out, `${name}.preview.png`), renderPreview(result.tiles, result.graph, result.validation));
+  writeManifests({ inputs: [file], outputs: ["template.js", "report.json", "preview.png"].map((suffix) => join(out, `${name}.${suffix}`)), proof: analysisProof(result, options) });
   console.log(`wrote ${join(out, name)}.template.js, .report.json and .preview.png`);
 }
 if (!result.ok && options.noFail !== true) process.exit(1);

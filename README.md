@@ -70,3 +70,16 @@ walls, lanes, stubs, fidelity, findings). `records/<variant>.report.json` is the
 `records/<variant>.preview.png` shows tiles, surfaces (green main route or network, blue branch, red error,
 orange warning), moves (yellow wall climb, grey jump or drop), treated stubs (brown) and barriers (magenta).
 `records/<name>.import.json` is the account of the whole import; `records/<name>.diff.png` the fidelity picture.
+
+Every output has its own `<full-filename>.manifest.json` certificate (ADR 0010), including previews and
+diagnostics. It records this tool's version and commit, input and output SHA-256 hashes, deterministic proof
+and build time. Paths are relative to the certificate. The game developer pins the accepted tool version;
+no other asset tool is called or imported. `--no-fail` never turns a failed proof into a passing one.
+
+A human exception uses `proof.accepted` with `by`, `reason` and a real ISO `date`, leaving `proof.ok` intact.
+Report every human finding as an issue here with the exact input as a regression fixture and an assertion
+for the finding code. Repair the tool and regenerate; never edit a generated asset to make its proof pass.
+
+For existing records only, run `node tools/migrate-legacy.mjs <harness.lock.json> --root <legacy-root>`.
+It migrates map entries without changing the lock or assets, preserves their hashes and historical version,
+and refuses to overwrite certificates. Missing or changed files produce a failed proof with diagnostics.

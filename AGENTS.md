@@ -1,11 +1,11 @@
 # runners-map
 
 Map templates for a platform race (Zerun) from an attached drawing: tiles, a graph the runner can be asked
-about, rules as findings with codes, and the game's template module, with proof. The harness converts; it never
+about, rules as findings with codes, and the game's template module, with proof. This tool converts; it never
 draws (ADR 0008). Three profiles (ADR 0007): **two-levels**, the owner's course piece; **zerun-circuit**, a race
 track with Zerun's physics and world; **circuit**, the same rules with SpeedRunners' reach, calibrated on 79
 reference maps kept as golden test cases. The rules are in `docs/rules.md`; the reasons are ADRs (`docs/adr/`);
-the words are in `GLOSSARY.md`. The harness was ported from Zerun's (ADR 0001).
+the words are in `GLOSSARY.md`.
 
 ## Layout
 
@@ -69,3 +69,9 @@ the words are in `GLOSSARY.md`. The harness was ported from Zerun's (ADR 0001).
 - A change in output regenerates the golden files in the same pull request, and the diff is reviewed; a golden
   that changes without a reason named in the pull request is a bug.
 - Contradicting an ADR is said explicitly in the pull request.
+- This repository owns only map conversion, map measurements and map proof. It never imports or calls another asset tool.
+- Each output command writes a closed certificate beside every output (ADR 0010). Adding a certificate field needs a new ADR here.
+- Only deterministic map code sets `proof.ok`. An AI generates inputs and reads findings; it never supplies a verdict.
+- A human finding becomes an issue here with the failing input as a regression fixture before its fix. Preserve the input and assert its finding code.
+- A human acceptance records `by`, `reason` and `date` in `proof.accepted` without changing the failing proof or asset.
+- Legacy records are preserved. Only this tool's migration command issues map certificates from their recorded provenance.

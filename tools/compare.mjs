@@ -8,6 +8,7 @@ import { basename, extname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./lib/args.mjs";
 import { compareToSource, decodePng, encodePng, fromRows, IMPORT, toCells } from "../src/index.js";
+import { writeManifests } from "./lib/manifest.mjs";
 
 const { positionals, options } = parseArgs(process.argv.slice(2));
 const [drawing, mapFile] = positionals;
@@ -29,4 +30,5 @@ writeFileSync(out, encodePng(result.diff));
 const box = result.box ? `rows ${result.box.top}-${result.box.bottom}, cols ${result.box.left}-${result.box.right} (px)` : "none";
 console.log(`fidelity ${Math.round(result.fidelity * 1000) / 10}%: ${result.mismatched} of ${result.compared} pixels differ, ${result.cropped} cropped; box ${box}; wrote ${out}`);
 const minimum = options.minFidelity ?? IMPORT.minFidelity;
+writeManifests({ inputs: [drawing, mapFile], outputs: [out], proof: { ok: result.fidelity >= minimum, metrics: { fidelity: result.fidelity, mismatched: result.mismatched, compared: result.compared, cropped: result.cropped, box: result.box, minimum, options } } });
 if (result.fidelity < minimum) process.exit(1);

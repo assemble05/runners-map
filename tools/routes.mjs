@@ -11,6 +11,7 @@ import { buildGraph } from "../src/graph/surfaces.js";
 import { fromRows } from "../src/grid/tiles.js";
 import { spawnOf } from "../src/validate/circuit.js";
 import { HEADINGS, routesOf } from "../src/validate/routes.js";
+import { writeManifests } from "./lib/manifest.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -73,6 +74,7 @@ const unsealed = result.routes.filter((route) => !route.sealed).length;
 const passable = result.routes.filter((route) => route.clearance.crushed === 0);
 const best = [...passable].sort((a, b) => b.clearance.stand - a.clearance.stand || a.length - b.length)[0];
 const runnable = passable.filter((route) => route.clearance.lowClimbs.length === 0);
+writeManifests({ inputs: [file], outputs: [target], proof: { ok: result.routes.length > 0 && unsealed === 0 && runnable.length === result.routes.length, metrics: { count: result.routes.length, exact: result.exact, unsealed, runnable: runnable.length, limit } } });
 console.log(`${name}: ${result.routes.length} route(s) through the spawn${result.exact ? "" : " (more than the limit)"}, spawn ${JSON.stringify(result.spawn)} on ${JSON.stringify(result.start)}, lap heading ${out.lapHeading}, lap line ${result.lapLine.length} cell(s)`);
 if (lengths.length) {
   console.log(`  length ${lengths[0]}-${lengths[lengths.length - 1]} cells (median ${lengths[Math.floor(lengths.length / 2)]}); gates ${Math.min(...gates)}-${Math.max(...gates)} per route; ${unsealed} route(s) not sealed by their gates`);
