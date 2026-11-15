@@ -29,5 +29,5 @@ fail if the code broke?
   of a few rows written inline, so the reader sees the shape next to the assertion.
 - **The outer describe names the function or the set (review).** `describe("validate()")`,
   `describe("the SpeedRunners reference maps")`; cases inside say the situation in plain words.
-- **No file writes in tests (review).** Tools are tested through the functions they call; the tools themselves
-  are run by hand and by the golden scripts.
+- **No repository writes in tests (review).** Pure functions use in-memory fixtures. CLI certificate and legacy
+  migration tests use disposable operating-system temporary directories and remove them in `finally` (ADR 0010).

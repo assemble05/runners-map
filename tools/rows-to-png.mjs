@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "./lib/args.mjs";
 import { encodePng, fromRows, rowsToImage } from "../src/index.js";
+import { writeManifests } from "./lib/manifest.mjs";
 
 const { positionals, options } = parseArgs(process.argv.slice(2));
 const [file, out] = positionals;
@@ -14,4 +15,5 @@ if (!file || !out) {
 const tile = options.tile ?? 12;
 const tiles = fromRows(readFileSync(file, "utf8").split(/\r?\n/).filter((line) => line.length > 0));
 writeFileSync(out, encodePng(rowsToImage(tiles, tile)));
+writeManifests({ inputs: [file], outputs: [out], proof: { ok: true, metrics: { operation: "rows-to-image", cols: tiles.cols, rows: tiles.rows, tile } } });
 console.log(`wrote ${out} (${tiles.cols * tile}x${tiles.rows * tile})`);

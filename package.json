@@ -1,6 +1,6 @@
 {
   "name": "runners-map",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Map templates for a platform race from an attached drawing: tiles, a graph the runner can be asked about, rules as findings, fidelity against the drawing, dead-end stubs as decoration, one template per entry and exit, and the game's template module.",
   "type": "module",
   "license": "MIT",

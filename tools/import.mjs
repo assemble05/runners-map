@@ -12,6 +12,7 @@ import { basename, extname, join } from "node:path";
 import { parseArgs } from "./lib/args.mjs";
 import { printFindings } from "./lib/load.mjs";
 import { encodePng, importImage, renderPreview, summarizeImport, toModule } from "../src/index.js";
+import { analysisProof, writeManifests } from "./lib/manifest.mjs";
 
 const { positionals, options } = parseArgs(process.argv.slice(2));
 const [file] = positionals;
@@ -46,9 +47,11 @@ for (const variant of imported.variants) {
   writeFileSync(join(out, `${variant.name}.template.js`), toModule(result.template, analysis, basename(file)));
   writeFileSync(join(out, `${variant.name}.report.json`), JSON.stringify(analysis, null, 2));
   if (result.graph) writeFileSync(join(out, `${variant.name}.preview.png`), renderPreview(result.rampedTiles ?? result.tiles, result.graph, result.validation, { stubCells: variant.stubCells }));
+  writeManifests({ inputs: [file], outputs: ["template.js", "report.json", ...(result.graph ? ["preview.png"] : [])].map((suffix) => join(out, `${variant.name}.${suffix}`)), proof: analysisProof(result, options) });
 }
 writeFileSync(join(out, `${name}.import.json`), JSON.stringify(summarizeImport(imported), null, 2));
 writeFileSync(join(out, `${name}.diff.png`), encodePng(imported.fidelity.diff));
+writeManifests({ inputs: [file], outputs: [join(out, `${name}.import.json`), join(out, `${name}.diff.png`)], proof: { ok: imported.ok, metrics: { ...summarizeImport(imported), options } } });
 console.log(`wrote ${imported.variants.length} variant(s) under ${out}/: template .js, report .json, preview .png; plus ${name}.import.json and ${name}.diff.png`);
 if (!imported.ok && options.noFail !== true) process.exit(1);
 

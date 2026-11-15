@@ -7,6 +7,7 @@ import { basename, extname } from "node:path";
 import { parseArgs } from "./lib/args.mjs";
 import { analysisOptions, loadAndAnalyze, printFindings } from "./lib/load.mjs";
 import { renderPreview } from "../src/index.js";
+import { analysisProof, writeManifests } from "./lib/manifest.mjs";
 
 const { positionals, options } = parseArgs(process.argv.slice(2));
 const [file] = positionals;
@@ -19,4 +20,5 @@ printFindings(result);
 if (!result.layout.ok) process.exit(1);
 const out = options.out ?? `${basename(file, extname(file)).replace(/\.rows$/, "")}.preview.png`;
 writeFileSync(out, renderPreview(result.tiles, result.graph, result.validation));
+writeManifests({ inputs: [file], outputs: [out], proof: analysisProof(result, options) });
 console.log(`wrote ${out}`);

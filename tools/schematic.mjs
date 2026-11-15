@@ -11,6 +11,7 @@ import { analyzeTiles, fromRows } from "../src/index.js";
 import { ZERUN_LAPS_RULES } from "../src/config.js";
 import { schematicRows } from "../src/schematic/rects.js";
 import { applyRamps } from "../src/grid/ramps.js";
+import { writeManifests } from "./lib/manifest.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -70,6 +71,7 @@ writeFileSync(
   join(out, `${name}.report.json`),
   JSON.stringify({ name, profile: "zerun-laps", ok, errors, warnings: result.validation.warnings, laps, run, width: rows.width, height: rows.height }, null, 2) + "\n",
 );
+writeManifests({ inputs: [file], outputs: [join(out, `${name}.template.js`), join(out, `${name}.report.json`)], proof: { ok, metrics: { errors, warnings: result.validation.warnings, laps, run, minTiles } } });
 
 console.log(`schematic ${name}: ${rows.width}x${rows.height} cells, zerun-laps, ${ok ? "ok" : "NOT OK"}`);
 if (laps) {
